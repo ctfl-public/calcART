@@ -132,6 +132,113 @@ def read_dqrad(fileName):
     return yc, dqrad
 
 
+def calc_trans(thickness, ext, omega,        
+                nRays=200000, SF='LA', A1=0, 
+                g1=0, g2=0, f1=0, f2=0,
+                theta=None, theta_in=None, div_angle=None,
+                machine = "serial",
+                cmdargs = ["-screen","none"]):
+    
+    # ensure old version using A1 is working if not replaced with g1
+    g1 = A1 if (A1 != 0) else g1
+
+    if (div_angle and not is_num(theta_in)): raise ValueError("Incident direction is not defined.")
+    
+    sigma_sca = ext * omega
+    kappa = ext * (1-omega)
+
+    spa = sparta(machine, cmdargs) 
+
+    spa.command("seed 8887435")
+    spa.command("units si")
+    spa.command("dimension 3")
+    spa.command("boundary ss ss ss")
+
+    if (SF == 'LA'): # Linear Anisotropic
+        spa.command("global radiation RMCRT pathlength 1 \
+        sigma_sca " + str(sigma_sca) + " g1 " + str(g1) +" kappa " + str(kappa) +  " T 0")
+    elif (SF == 'HG'):  # Henyey-Greenstein
+        spa.command("global radiation RMCRT pathlength 1 \
+        sigma_sca " + str(sigma_sca) + " HG g1 "+ str(g1) +" kappa " + str(kappa) +  " T 0")
+    elif (SF == 'NC'):  # combination of HG, Nicolau et al. (1994)
+        spa.command(f"global radiation RMCRT pathlength 1 \
+        sigma_sca {sigma_sca} NC g1 {g1} g2 {g2} f1 {f1} f2 {f2} kappa {kappa} T 0")
+    else:
+        sys.exit(SF+" is not recognized.")
+
+    spa.command("photon_continuous none constant")
+    spa.command("create_box -1 1 0 "+ str(thickness)+ " -1 1")
+    spa.command("create_grid 1 1 1 block * * *")
+
+    spa.command("timestep 0.5")
+    spa.command("balance_grid rcb part")
+
+    # cold mirror surface
+    spa.command("surf_collide 1 radiationboundary epsilon 0 alpha 0 rho_s 1 rho_d 0 temp 0")
+    # cold black surface
+    spa.command("surf_collide 2 radiationboundary epsilon 1 alpha 1 rho_s 0 rho_d 0 temp 0")
+    # black surface (unit emission)
+    if (div_angle):
+        a1 = np.sin(theta_in)
+        a2 = -np.cos(theta_in)
+        a3 = 0
+        spa.command(f"surf_collide 3 radiationboundary epsilon 1 alpha 1 rho_s 0 rho_d 0 temp {(1/SIGMA)**0.25} "+
+                    f" collimated {a1} {a2} {a3} div {div_angle}")
+    elif (is_num(theta_in)):
+        spa.command(f"surf_collide 3 radiationboundary epsilon 1 alpha 1 rho_s 0 rho_d 0 temp {(1/SIGMA)**0.25}"+ \
+                    f" theta_in {theta_in}")
+    else:
+        spa.command(f"surf_collide 3 radiationboundary epsilon 1 alpha 1 rho_s 0 rho_d 0 temp {(1/SIGMA)**0.25}")
+
+    # hack to delete photon
+    spa.command("surf_react 1 global 1.0 0.0")
+
+    # assign collide modules
+    spa.command("bound_modify xlo xhi zlo zhi collide 1 react 1")
+    spa.command("bound_modify ylo collide 2 react 1")
+    spa.command("bound_modify yhi collide 3 react 1")
+
+    if (is_num(theta)):
+        spa.command(f"fix 1 emit/face/photon ylo n {nRays} nevery 999999999 limit xzCenter theta {theta}")
+    else:
+        spa.command(f"fix 1 emit/face/photon ylo n {nRays} nevery 999999999 limit xzCenter")
+
+    spa.command("stats 5000")
+    spa.command("run 1")
+
+    outfldr = os.path.join("dump","ext"+str(ext)+"-sigma"+str(sigma_sca)+"-th"+str(thickness*1000))
+    # create directory if not exists
+    if not os.path.exists(outfldr):
+        os.makedirs(outfldr) 
+    outfile = os.path.join(outfldr,"out.trans")
+
+    spa.command(f"dump 1 grid all 999999999 {outfile} id xc yc zc I countEmitted")
+    spa.command("run 200000000")
+    
+    spa.close()
+
+    # dir-dir (div_angle method)
+    if (div_angle and is_num(theta)): 
+        return read_prop(outfile) / (2*np.pi*(1-np.cos(div_angle)))
+    # dir-dir (cos method)
+    elif (not div_angle and is_num(theta_in) and is_num(theta)): 
+        return read_prop(outfile) #* np.cos(theta_in) 
+    # hem-dir
+    elif (not div_angle and not is_num(theta_in) and is_num(theta)): 
+        return read_prop(outfile) 
+    # dir-hem (div_angle method)
+    elif (div_angle and not is_num(theta)): 
+        # print("Warning: Consider integrating over all out directions to get dir-hem property.")
+        return read_prop(outfile) / (2*(1-np.cos(div_angle)))
+    # dir-hem (cos method)
+    elif (not div_angle and is_num(theta_in) and not is_num(theta)): 
+        # print("Warning: Consider integrating over all out directions to get dir-hem property.")
+        return read_prop(outfile) * np.pi
+    # hem-hem
+    elif (not div_angle and not is_num(theta_in) and not is_num(theta)): 
+        return read_prop(outfile) * np.pi
+
+
 def calc_ref(thickness, ext, omega,
                 nRays=200000, SF='LA', A1=0, 
                 g1=0, g2=0, f1=0, f2=0,
@@ -245,8 +352,83 @@ def calc_ref(thickness, ext, omega,
         return read_prop(outfile) * np.pi
 
 
+def calc_abs(thickness, ext, omega,
+                nRays=200000, SF='LA', A1=0, 
+                g1=0,
+                theta=-1,
+                machine = "serial",
+                cmdargs = ["-screen","none"]):
+    
+    # ensure old version using A1 is working if not replaced with g1
+    g1 = A1 if (A1 != 0) else g1
+
+    sigma_sca = ext * omega
+    kappa = ext * (1-omega)
+
+    spa = sparta(machine, cmdargs) 
+
+    spa.command("seed 8887435")
+    spa.command("units si")
+    spa.command("dimension 3")
+    spa.command("boundary ss ss ss")
+
+    if (SF == 'LA'): # Linear Anisotropic
+        spa.command("global radiation RMCRT pathlength 1 \
+        sigma_sca " + str(sigma_sca) + " g1 " + str(g1) +" kappa " + str(kappa) +  " T " + str((1/SIGMA)**0.25))
+    elif (SF == 'HG'):  # Henyey-Greenstein
+        spa.command("global radiation RMCRT pathlength 1 \
+        sigma_sca " + str(sigma_sca) + " HG g1 "+ str(g1) +" kappa " + str(kappa) +  " T " + str((1/SIGMA)**0.25))
+    else:
+        sys.exit(SF+" is not recognized.")
+
+    spa.command("photon_continuous none constant")
+    spa.command("create_box -1 1 0 "+ str(thickness)+ " -1 1")
+    spa.command("create_grid 1 1 1 block * * *")
+
+    spa.command("timestep 0.5")
+    spa.command("balance_grid rcb part")
+
+    # cold mirror surface
+    spa.command("surf_collide 1 radiationboundary epsilon 0 alpha 0 rho_s 1 rho_d 0 temp 0")
+    # cold black surface
+    spa.command("surf_collide 2 radiationboundary epsilon 1 alpha 1 rho_s 0 rho_d 0 temp 0")
+
+    # hack to delete photon
+    spa.command("surf_react 1 global 1.0 0.0")
+
+    # assign collide modules
+    spa.command("bound_modify xlo xhi zlo zhi collide 1 react 1")
+    spa.command("bound_modify ylo yhi collide 2 react 1")
+
+    #create_photons n 1000
+    if (theta == -1):
+        spa.command("fix 1 emit/face/photon yhi n " + str(nRays) + " nevery 999999999 limit xzCenter")
+    else:
+        spa.command("fix 1 emit/face/photon yhi n " + str(nRays) + " nevery 999999999 limit xzCenter theta " + str(theta))
+
+    spa.command("variable epsilon equal 1")
+    spa.command("variable T equal 0")
+
+    spa.command("stats 5000")
+    spa.command("run 1")
+
+    outfldr = os.path.join("dump","ext"+str(ext)+"-sigma"+str(sigma_sca)+"-th"+str(thickness*1000))
+    # create directory if not exists
+    if not os.path.exists(outfldr):
+        os.makedirs(outfldr) 
+    outfile = os.path.join(outfldr,"out.abs")
+
+    spa.command("dump 1 grid all 999999999 " + outfile + " id xc yc zc qrad countEmitted")
+    spa.command("run 200000000")
+
+    spa.close()
+
+    return -read_prop(outfile)
+
+
 def is_num(var):
     return isinstance(var, (int, float))
+
 
 def read_prop(fileName):
     with open(fileName, 'r') as f:
@@ -266,8 +448,3 @@ def read_prop(fileName):
         count = vals[5]
 
     return out
-
-
-# # rum main application
-# if __name__ == "__main__":
-#     main()
