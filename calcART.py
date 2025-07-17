@@ -6,7 +6,7 @@ import numpy as np
 
 # output directory name
 # mydir = os.path.join(os.getcwd(), datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S'))
-mydir = "dump"
+mydir = os.path.join(os.getcwd(), "dump")
 if not os.path.exists(mydir):
     os.makedirs(mydir)
 
