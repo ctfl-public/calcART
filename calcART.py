@@ -43,8 +43,8 @@ def calc_dqrad(kappa, sigma_sca, T, outputName, limits=[0, 1], \
     outfile = os.path.join(mydir,outputName)
 
     # skip runing of file exists
-    if os.path.exists(outfile):
-        print(f"Case already exists: {outfile}")
+    if os.path.exists(outfile) and os.path.getsize(outfile) > 0:
+        print(f"Case already exists and is not empty: {outfile}")
         return
     
     T_profile = T
