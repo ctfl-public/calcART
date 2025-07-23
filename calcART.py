@@ -11,9 +11,11 @@ if not os.path.exists(mydir):
     os.makedirs(mydir)
 
 def calc_dqrad(kappa, sigma_sca, T, outputName, limits=[0, 1], \
-               size=1 , nRays=1000, SF='LA', g1=0, \
+                size=1 , nRays=1000, SF='LA', g1=0, \
                 nonhomogeneous=False, \
-                    in_rad=0):
+                in_rad=0, \
+                machine = "serial", \
+                cmdargs = ["-screen","none"]):
     """
     Calculate radiative heat flux (Dqrad).
 
@@ -52,7 +54,7 @@ def calc_dqrad(kappa, sigma_sca, T, outputName, limits=[0, 1], \
         T = 0
 
     # change to your machine name used to compile sparta: "serial", "serial_debug", ..
-    spa = sparta("serial") 
+    spa = sparta(machine, cmdargs) 
 
     spa.command("seed 8887435")
     spa.command("units si")
@@ -132,6 +134,8 @@ def read_dqrad(fileName):
         tuple: A tuple containing two lists:
             - yc (list): Y-coordinate values
             - dqrad (list): Radiative heat flux values (negated from file)
+                positive values indicate incoming radiation (heat gain),
+                negative values indicate outgoing radiation (heat loss).
     """
     filePath = os.path.join(mydir,fileName)
     yc = []
