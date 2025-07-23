@@ -86,11 +86,11 @@ def calc_dqrad(kappa, sigma_sca, T, outputName, limits=[0, 1], \
     spa.command("balance_grid rcb part")
 
     # black surface
-    spa.command("surf_collide 1 radiationboundary epsilon 1 alpha 1 rho_s 0 rho_d 0 temp "+ str((in_rad/SIGMA)**0.25))
+    spa.command("surf_collide 1 radiationboundary epsilon 1 rho_s 0 rho_d 0 temp "+ str((in_rad/SIGMA)**0.25))
     # cold black surface
-    spa.command("surf_collide 2 radiationboundary epsilon 1 alpha 1 rho_s 0 rho_d 0 temp 0")
+    spa.command("surf_collide 2 radiationboundary epsilon 1 rho_s 0 rho_d 0 temp 0")
     # cold mirror surface
-    spa.command("surf_collide 3 radiationboundary epsilon 0 alpha 0 rho_s 1 rho_d 0 temp 0")
+    spa.command("surf_collide 3 radiationboundary epsilon 0 rho_s 1 rho_d 0 temp 0")
 
     # hack to delete photon
     spa.command("surf_react 1 global 1.0 0.0")
@@ -233,21 +233,21 @@ def calc_trans(thickness, ext, omega,
         spa.command("balance_grid rcb part")
 
         # cold mirror surface
-        spa.command("surf_collide 1 radiationboundary epsilon 0 alpha 0 rho_s 1 rho_d 0 temp 0")
+        spa.command("surf_collide 1 radiationboundary epsilon 0 rho_s 1 rho_d 0 temp 0")
         # cold black surface
-        spa.command("surf_collide 2 radiationboundary epsilon 1 alpha 1 rho_s 0 rho_d 0 temp 0")
+        spa.command("surf_collide 2 radiationboundary epsilon 1 rho_s 0 rho_d 0 temp 0")
         # black surface (unit emission)
         if (div_angle):
             a1 = np.sin(theta_in)
             a2 = -np.cos(theta_in)
             a3 = 0
-            spa.command(f"surf_collide 3 radiationboundary epsilon 1 alpha 1 rho_s 0 rho_d 0 temp {(1/SIGMA)**0.25} "+
+            spa.command(f"surf_collide 3 radiationboundary epsilon 1 rho_s 0 rho_d 0 temp {(1/SIGMA)**0.25} "+
                         f" collimated {a1} {a2} {a3} div {div_angle}")
         elif (is_num(theta_in)):
-            spa.command(f"surf_collide 3 radiationboundary epsilon 1 alpha 1 rho_s 0 rho_d 0 temp {(1/SIGMA)**0.25}"+ \
+            spa.command(f"surf_collide 3 radiationboundary epsilon 1 rho_s 0 rho_d 0 temp {(1/SIGMA)**0.25}"+ \
                         f" theta_in {theta_in}")
         else:
-            spa.command(f"surf_collide 3 radiationboundary epsilon 1 alpha 1 rho_s 0 rho_d 0 temp {(1/SIGMA)**0.25}")
+            spa.command(f"surf_collide 3 radiationboundary epsilon 1 rho_s 0 rho_d 0 temp {(1/SIGMA)**0.25}")
 
         # hack to delete photon
         spa.command("surf_react 1 global 1.0 0.0")
@@ -366,21 +366,21 @@ def calc_ref(thickness, ext, omega,
         spa.command("balance_grid rcb part")
 
         # cold mirror surface
-        spa.command("surf_collide 1 radiationboundary epsilon 0 alpha 0 rho_s 1 rho_d 0 temp 0")
+        spa.command("surf_collide 1 radiationboundary epsilon 0 rho_s 1 rho_d 0 temp 0")
         # cold black surface
-        spa.command("surf_collide 2 radiationboundary epsilon 1 alpha 1 rho_s 0 rho_d 0 temp 0")
+        spa.command("surf_collide 2 radiationboundary epsilon 1 rho_s 0 rho_d 0 temp 0")
         # black surface (unit emission)
         if (div_angle):
             a1 = np.sin(theta_in)
             a2 = -np.cos(theta_in)
             a3 = 0
-            spa.command(f"surf_collide 3 radiationboundary epsilon 1 alpha 1 rho_s 0 rho_d 0 temp {(1/SIGMA)**0.25} "+
+            spa.command(f"surf_collide 3 radiationboundary epsilon 1 rho_s 0 rho_d 0 temp {(1/SIGMA)**0.25} "+
                         f" collimated {a1} {a2} {a3} div {div_angle}")
         elif (is_num(theta_in)):
-            spa.command(f"surf_collide 3 radiationboundary epsilon 1 alpha 1 rho_s 0 rho_d 0 temp {(1/SIGMA)**0.25}"+ \
+            spa.command(f"surf_collide 3 radiationboundary epsilon 1 rho_s 0 rho_d 0 temp {(1/SIGMA)**0.25}"+ \
                         f" theta_in {theta_in}")
         else:
-            spa.command(f"surf_collide 3 radiationboundary epsilon 1 alpha 1 rho_s 0 rho_d 0 temp {(1/SIGMA)**0.25}")
+            spa.command(f"surf_collide 3 radiationboundary epsilon 1 rho_s 0 rho_d 0 temp {(1/SIGMA)**0.25}")
 
         # hack to delete photon
         spa.command("surf_react 1 global 1.0 0.0")
@@ -493,9 +493,9 @@ def calc_abs(thickness, ext, omega,
         spa.command("balance_grid rcb part")
 
         # cold mirror surface
-        spa.command("surf_collide 1 radiationboundary epsilon 0 alpha 0 rho_s 1 rho_d 0 temp 0")
+        spa.command("surf_collide 1 radiationboundary epsilon 0 rho_s 1 rho_d 0 temp 0")
         # cold black surface
-        spa.command("surf_collide 2 radiationboundary epsilon 1 alpha 1 rho_s 0 rho_d 0 temp 0")
+        spa.command("surf_collide 2 radiationboundary epsilon 1 rho_s 0 rho_d 0 temp 0")
 
         # hack to delete photon
         spa.command("surf_react 1 global 1.0 0.0")
