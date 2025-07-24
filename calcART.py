@@ -3,6 +3,7 @@ import os
 from constants import SIGMA
 import sys
 import numpy as np
+import warnings
 
 # output directory name
 # mydir = os.path.join(os.getcwd(), datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S'))
@@ -191,6 +192,8 @@ def calc_trans(thickness, ext, omega,
     """
     
     # ensure old version using A1 is working if not replaced with g1
+    if (A1 != 0):
+        warnings.warn("A1 is deprecated, use g1 instead.", DeprecationWarning)
     g1 = A1 if (A1 != 0) else g1
 
     if (div_angle and not is_num(theta_in)): raise ValueError("Incident direction is not defined.")
@@ -324,6 +327,8 @@ def calc_ref(thickness, ext, omega,
     """
     
     # ensure old version using A1 is working if not replaced with g1
+    if (A1 != 0):
+        warnings.warn("A1 is deprecated, use g1 instead.", DeprecationWarning)
     g1 = A1 if (A1 != 0) else g1
 
     if (div_angle and not is_num(theta_in)): raise ValueError("Incident direction is not defined.")
@@ -456,6 +461,8 @@ def calc_abs(thickness, ext, omega,
     """
     
     # ensure old version using A1 is working if not replaced with g1
+    if (A1 != 0):
+        warnings.warn("A1 is deprecated, use g1 instead.", DeprecationWarning)
     g1 = A1 if (A1 != 0) else g1
 
     sigma_sca = ext * omega
