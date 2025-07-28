@@ -11,14 +11,14 @@ mydir = os.path.join(os.getcwd(), "dump")
 if not os.path.exists(mydir):
     os.makedirs(mydir)
 
-def calc_dqrad(kappa, sigma_sca, T, outputName, limits=[0, 1], \
+def calc_dqrad(kappa, sigma_sca, T, outputName=None, limits=[0, 1], \
                 size=1 , nRays=1000, SF='LA', g1=0, \
                 nonhomogeneous=False, \
                 in_rad=0, \
                 machine = "serial", \
                 cmdargs = ["-screen","none"]):
     """
-    Calculate radiative heat flux (Dqrad).
+    Calculate divergence of radiative heat flux (Dqrad, W/m3).
 
     The medium is confined between ylo and yhi in y direction;
     ylo is cold black surface, yhi is black surface with {in_rad} radiation input.
@@ -29,7 +29,8 @@ def calc_dqrad(kappa, sigma_sca, T, outputName, limits=[0, 1], \
         T (float or str): Temperature of the medium, can be a constant value or a file.
             file should contain x, T if nonhomogeneous is False,
             or x, T, kappa, sigma_sca if nonhomogeneous is True.
-        outputName (str): Name of output file (includes extension).
+        outputName (str): Name of output file (includes extension). 
+            if None, output is renamed to default name. (default is None).
         limits (list): [ylo, yhi] limits of the grid in y direction.
         size (int): Size of the grid along y axis (default is 1).
         nRays (int): Number of rays to be emitted from each cell (default is 1000).
@@ -43,6 +44,9 @@ def calc_dqrad(kappa, sigma_sca, T, outputName, limits=[0, 1], \
         The output file contains yc and Dqrad values.
     """
     
+    D = abs(limits[1] - limits[0])
+    if not outputName:
+        outputName = f"T{T}-abs{kappa:0.0f}-sca{sigma_sca:0.0f}-{SF}-g1{g1:0.3f}-D{D:0.3f}-size{size}-nRays{nRays}-inrad{in_rad:0.1e}.dqrad"
     outfile = os.path.join(mydir,outputName)
 
     # skip runing of file exists
@@ -202,9 +206,9 @@ def calc_trans(thickness, ext, omega,
     kappa = ext * (1-omega)
 
     if (SF == 'LA'):
-        outfile = os.path.join(mydir,f"ext{ext:.0f}-sigma{sigma_sca:.0f}-th{thickness*1000:.0f}.trans")
+        outfile = os.path.join(mydir,f"ext{ext:.0f}-sigma{sigma_sca:.0f}-th{thickness*1000:.3f}.trans")
     else:
-        outfile = os.path.join(mydir,f"ext{ext:.0f}-sigma{sigma_sca:.0f}-HG-g{g1:0.3f}-th{thickness*1000:.0f}.trans")
+        outfile = os.path.join(mydir,f"ext{ext:.0f}-sigma{sigma_sca:.0f}-HG-g{g1:0.3f}-th{thickness*1000:.3f}.trans")
 
     if os.path.exists(outfile) and os.path.getsize(outfile) > 0:
         print(f"Case already exists and is not empty: {outfile}")
@@ -337,9 +341,9 @@ def calc_ref(thickness, ext, omega,
     kappa = ext * (1-omega)
 
     if (SF == 'LA'):
-        outfile = os.path.join(mydir,f"ext{ext:.0f}-sigma{sigma_sca:.0f}-th{thickness*1000:.0f}.ref")
+        outfile = os.path.join(mydir,f"ext{ext:.0f}-sigma{sigma_sca:.0f}-th{thickness*1000:.3f}.ref")
     else:
-        outfile = os.path.join(mydir,f"ext{ext:.0f}-sigma{sigma_sca:.0f}-HG-g{g1:0.3f}-th{thickness*1000:.0f}.ref")
+        outfile = os.path.join(mydir,f"ext{ext:.0f}-sigma{sigma_sca:.0f}-HG-g{g1:0.3f}-th{thickness*1000:.3f}.ref")
 
     if os.path.exists(outfile) and os.path.getsize(outfile) > 0:
         print(f"Case already exists and is not empty: {outfile}")
@@ -457,7 +461,7 @@ def calc_abs(thickness, ext, omega,
         cmdargs (list): Command line arguments for SPARTA (default: ["-screen","none"]).
         
     Returns:
-        float: Absorption coefficient (negative of the radiative heat source term).
+        float: Absorption coefficient.
     """
     
     # ensure old version using A1 is working if not replaced with g1
@@ -469,9 +473,9 @@ def calc_abs(thickness, ext, omega,
     kappa = ext * (1-omega)
 
     if (SF == 'LA'):
-        outfile = os.path.join(mydir,f"ext{ext:.0f}-sigma{sigma_sca:.0f}-th{thickness*1000:.0f}.abs")
+        outfile = os.path.join(mydir,f"ext{ext:.0f}-sigma{sigma_sca:.0f}-th{thickness*1000:.3f}.abs")
     else:
-        outfile = os.path.join(mydir,f"ext{ext:.0f}-sigma{sigma_sca:.0f}-HG-g{g1:0.3f}-th{thickness*1000:.0f}.abs")
+        outfile = os.path.join(mydir,f"ext{ext:.0f}-sigma{sigma_sca:.0f}-HG-g{g1:0.3f}-th{thickness*1000:.3f}.abs")
 
     if os.path.exists(outfile) and os.path.getsize(outfile) > 0:
         print(f"Case already exists and is not empty: {outfile}")
