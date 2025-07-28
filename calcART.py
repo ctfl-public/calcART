@@ -531,6 +531,107 @@ def calc_abs(thickness, ext, omega,
     return -read_prop(outfile)
 
 
+def calc_emission(ext, omega, T, limits=[0, 1], \
+                size=1 , nRays=200000, SF='LA', g1=0, \
+                nonhomogeneous=False, \
+                machine = "serial", \
+                cmdargs = ["-screen","none"]):
+    """
+    Calculate radiative heat flux (qrad, W/m2).
+
+    The medium is confined between 2 cold black plates in ylo and yhi directions. 
+    The emission (qrad) is calculated at yhi surface.
+
+    Args:
+        kappa (float): Absorption coefficient.
+        sigma_sca (float): Scattering coefficient.
+        T (float or str): Temperature of the medium, can be a constant value or a file.
+            file should contain x, T if nonhomogeneous is False,
+            or x, T, kappa, sigma_sca if nonhomogeneous is True.
+        limits (list): [ylo, yhi] limits of the grid in y direction.
+        size (int): Size of the grid along y axis (default is 1).
+        nRays (int): Number of rays to be emitted from each cell (default is 200000).
+        SF (str): Scattering function, 'LA' for Linear Anisotropic, 'HG' for Henyey-Greenstein.
+        g1 (float): Anisotropy factor for LA or HG.
+        nonhomogeneous (bool): If True, T_profile is a file with x, T, kappa, and sigma_sca values. (default: False).
+        machine (str): SPARTA machine configuration (default: "serial").
+        cmdargs (list): Command line arguments for SPARTA (default: ["-screen","none"]).
+
+    Returns:
+        float: radiative emission at yhi, W/m2.
+    """
+
+    sigma_sca = ext * omega
+    kappa = ext * (1-omega)
+    D = abs(limits[1] - limits[0])
+
+    outfile = os.path.join(mydir,f"T{T}-abs{kappa:0.0f}-sca{sigma_sca:0.0f}-{SF}-g1{g1:0.3f}-D{D*1000:0.3f}-size{size}-nRays{nRays}.emi")
+
+    T_profile = T
+    if (type(T) is str):
+        T = 0
+
+    # skip runing of file exists
+    if os.path.exists(outfile) and os.path.getsize(outfile) > 0:
+        print(f"Case already exists and is not empty: {outfile}")
+    else:
+
+        spa = sparta(machine, cmdargs) 
+
+        spa.command("seed 8887435")
+        spa.command("units si")
+        spa.command("dimension 3")
+        spa.command("boundary ss ss ss")
+
+        if (SF in ['LA', 'HG']):
+            spa.command("global radiation RMCRT pathlength 1 \
+            sigma_sca " + str(sigma_sca) + " " + SF + " g1 " + str(g1) +" kappa " + str(kappa) +  " T " + str(T))
+        else:
+            sys.exit(SF+" is not recognized.")
+
+        spa.command("photon_continuous none constant")
+        spa.command("create_box -1 1 " + int2str(limits) + " -1 1")
+        spa.command("create_grid 1 " + str(size) + " 1 block * * *")
+
+        if (type(T_profile) is str):
+            # variable kappa and sigma, file contains x, T, kappa, and sigma
+            if nonhomogeneous: 
+                spa.command("global MR " + T_profile)
+            # constant kappa and sigma, file contains only x and T
+            else: 
+                spa.command("global T MR " + T_profile)
+
+        spa.command("timestep 0.5")
+        spa.command("balance_grid rcb part")
+
+        # cold mirror surface
+        spa.command("surf_collide 1 radiationboundary epsilon 0 rho_s 1 rho_d 0 temp 0")
+        # cold black surface
+        spa.command("surf_collide 2 radiationboundary epsilon 1 rho_s 0 rho_d 0 temp 0")
+
+        # hack to delete photon
+        spa.command("surf_react 1 global 1.0 0.0")
+
+        # assign collide modules
+        spa.command("bound_modify xlo xhi zlo zhi collide 1 react 1")
+        spa.command("bound_modify ylo yhi collide 2 react 1")
+
+        spa.command("fix 1 emit/face/photon yhi n " + str(nRays) + " nevery 999999999 limit xzCenter")
+
+        spa.command("variable epsilon equal 1")
+        spa.command("variable T equal 0")
+
+        spa.command("stats 5000")
+        spa.command("run 1")
+
+        spa.command("dump 1 grid all 999999999 " + outfile + " id xc yc zc qrad countEmitted")
+        spa.command("run 200000000")
+
+        spa.close()
+
+    return -read_prop(outfile)
+
+
 def is_num(var):
     """
     Check if a variable is a numeric type (int or float).
