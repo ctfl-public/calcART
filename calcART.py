@@ -445,7 +445,7 @@ def calc_abs(thickness, ext, omega,
                 machine = "serial",
                 cmdargs = ["-screen","none"]):
     """
-    Calculate absorptivity of a medium.
+    Calculate absorptivity (==emissivity) of a medium.
     
     Args:
         thickness (float): Thickness of the medium slab.
@@ -682,3 +682,68 @@ def read_prop(fileName):
         count = vals[5]
 
     return out
+
+
+def calc_EWET(t:np.ndarray, T:np.ndarray, D:float, beta:float, omega:float, SF:str, g1:float):
+	"""
+	Calculate emission from infinite slab with nonuniform temperature 
+	using the exponential weighted effective temperature (EWET) emission model.
+
+	Args:
+		t (np.ndarray): Indepth distance from radiating surface.
+		T (np.ndarray): Temperature profile.
+		D (float): Thickness of the slab.
+		beta (float): Absorption coefficient (1/m).
+		omega (float): Scattering coefficient (1/m).
+		SF (str): Scattering function type, e.g., "HG" for Henyey-Greenstein.
+		g1 (float): Asymmetry parameter for scattering.
+
+	Returns:
+		float: Emission from the slab (W/m^2).
+	"""
+	if SF == "HG":
+		p = [0.27, -0.96, 1.35, -0.4098]
+
+		rhos = np.exp(-(p[0]*(1-omega)**2+p[1]*omega**2+p[2]+p[3]*g1*omega)*beta*t)
+		T4 = np.average(np.power(T, 4), weights=rhos)
+		epsilon = calc_abs(D, beta, omega, SF="HG", g1=g1) # to be replaced with emissivity model
+		return epsilon * SIGMA * T4
+	else:
+		raise NotImplementedError(f"SF={SF} not implemented")
+	
+
+def calc_ED(q:float, t:np.ndarray, D:float, beta:float, omega:float, SF:str, g1:float):
+	"""
+	Calculate exponential decay of div.q within an infinite slab using the 
+	exponential decay (ED) model.
+
+	Args:
+		q (float): Incident heat flux.
+		t (np.ndarray): Thickness of the slab.
+		D (float): Thickness of the slab.
+		beta (float): Absorption coefficient (1/m).
+		omega (float): Scattering coefficient (1/m).
+		SF (str): Scattering function type, e.g., "HG" for Henyey-Greenstein.
+		g1 (float): Asymmetry parameter for scattering.
+
+	Returns:
+		float: Divergence of q profile along the slab (W/m^3). 
+		Negated so that positive is for gain, negative is for loss.
+	"""
+	if SF == "HG":
+		# optimization with wieghts (favors indepth fitting)
+		c0, c1, c2, p1 = [ 1.2850711,  -0.48658091, -0.51118171,  4.87108912]
+		c11, c21, c3 = [-0.70981822,  0.46435636,  3.10418282]
+		if beta*(1-omega) < 500:
+			# without using weights (favors near surface fitting)
+			c0, c1, c2, p1 = [ 1.74447467, -0.9899896,  -0.46715914,  4.30635443]
+			c11, c21, c3 = [-0.7545377,   0.57699982,  1.38960422]
+
+
+		z = (c0 + (c1+c11*g1)*omega + (c2+c21*g1)*omega**(p1+c3*g1))*beta
+		rho = calc_ref(D, beta, omega, SF="HG", g1=g1) # to be replaced with reflectivity model
+		dq = z * np.exp(-z*t) * (1-rho) * q
+		return dq
+	else:
+		raise NotImplementedError(f"SF={SF} not implemented")
+	
