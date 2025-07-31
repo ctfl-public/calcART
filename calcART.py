@@ -734,10 +734,10 @@ def calc_ED(q:float, t:np.ndarray, D:float, beta:float, omega:float, SF:str, g1:
 		# optimization with wieghts (favors indepth fitting)
 		c0, c1, c2, p1 = [ 1.2850711,  -0.48658091, -0.51118171,  4.87108912]
 		c11, c21, c3 = [-0.70981822,  0.46435636,  3.10418282]
-		if beta*(1-omega) < 500:
-			# without using weights (favors near surface fitting)
-			c0, c1, c2, p1 = [ 1.74447467, -0.9899896,  -0.46715914,  4.30635443]
-			c11, c21, c3 = [-0.7545377,   0.57699982,  1.38960422]
+		# if beta*(1-omega) < 500:
+		# 	# without using weights (favors near surface fitting)
+		# 	c0, c1, c2, p1 = [ 1.74447467, -0.9899896,  -0.46715914,  4.30635443]
+		# 	c11, c21, c3 = [-0.7545377,   0.57699982,  1.38960422]
 
 
 		z = (c0 + (c1+c11*g1)*omega + (c2+c21*g1)*omega**(p1+c3*g1))*beta
