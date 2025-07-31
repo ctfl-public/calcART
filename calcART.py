@@ -772,7 +772,7 @@ def read_prop(fileName):
     return out
 
 
-def calc_EWET(t:np.ndarray, T:np.ndarray, D:float, beta:float, omega:float, SF:str, g1:float):
+def calc_EWET(t:np.ndarray, T:np.ndarray, beta:float, omega:float, SF:str, g1:float, D:float=None, eps:float=None):
 	"""
 	Calculate emission from infinite slab with nonuniform temperature 
 	using the exponential weighted effective temperature (EWET) emission model.
@@ -780,27 +780,32 @@ def calc_EWET(t:np.ndarray, T:np.ndarray, D:float, beta:float, omega:float, SF:s
 	Args:
 		t (np.ndarray): Indepth distance from radiating surface.
 		T (np.ndarray): Temperature profile.
-		D (float): Thickness of the slab.
 		beta (float): Absorption coefficient (1/m).
 		omega (float): Scattering coefficient (1/m).
 		SF (str): Scattering function type, e.g., "HG" for Henyey-Greenstein.
 		g1 (float): Asymmetry parameter for scattering.
+		D (float, None if eps is provided): Thickness of the slab (m).
+        eps (float, None if D is provided): Emissivity of the slab. If None, it will be calculated using calc_abs.
 
 	Returns:
 		float: Emission from the slab (W/m^2).
 	"""
+	if D is None and eps is None:
+		raise ValueError("At least one of 'D' or 'eps' must be provided.")
+
 	if SF == "HG":
 		p = [0.27, -0.96, 1.35, -0.4098]
 
 		rhos = np.exp(-(p[0]*(1-omega)**2+p[1]*omega**2+p[2]+p[3]*g1*omega)*beta*t)
 		T4 = np.average(np.power(T, 4), weights=rhos)
-		epsilon = calc_abs(D, beta, omega, SF="HG", g1=g1) # to be replaced with emissivity model
-		return epsilon * SIGMA * T4
+		if eps is None:
+			eps = calc_abs(D, beta, omega, SF="HG", g1=g1) # to be replaced with emissivity model
+		return eps * SIGMA * T4
 	else:
 		raise NotImplementedError(f"SF={SF} not implemented")
 	
 
-def calc_ED(q:float, t:np.ndarray, D:float, beta:float, omega:float, SF:str, g1:float):
+def calc_ED(q:float, t:np.ndarray, beta:float, omega:float, SF:str, g1:float, D:float=None, rho:float=None):
 	"""
 	Calculate exponential decay of div.q within an infinite slab using the 
 	exponential decay (ED) model.
@@ -808,16 +813,20 @@ def calc_ED(q:float, t:np.ndarray, D:float, beta:float, omega:float, SF:str, g1:
 	Args:
 		q (float): Incident heat flux.
 		t (np.ndarray): Thickness of the slab.
-		D (float): Thickness of the slab.
 		beta (float): Absorption coefficient (1/m).
 		omega (float): Scattering coefficient (1/m).
 		SF (str): Scattering function type, e.g., "HG" for Henyey-Greenstein.
 		g1 (float): Asymmetry parameter for scattering.
+		D (float, None if rho is provided): Thickness of the slab (m).
+		rho (float, None if D is provided): Reflectivity of the slab. If None, it will be calculated using calc_ref.
 
 	Returns:
 		float: Divergence of q profile along the slab (W/m^3). 
 		Negated so that positive is for gain, negative is for loss.
 	"""
+	if rho is None and D is None:
+		raise ValueError("At least one of 'rho' or 'D' must be provided.")
+
 	if SF == "HG":
 		# optimization with wieghts (favors indepth fitting)
 		c0, c1, c2, p1 = [ 1.2850711,  -0.48658091, -0.51118171,  4.87108912]
@@ -829,7 +838,8 @@ def calc_ED(q:float, t:np.ndarray, D:float, beta:float, omega:float, SF:str, g1:
 
 
 		z = (c0 + (c1+c11*g1)*omega + (c2+c21*g1)*omega**(p1+c3*g1))*beta
-		rho = calc_ref(D, beta, omega, SF="HG", g1=g1) # to be replaced with reflectivity model
+		if rho is None:
+			rho = calc_ref(D, beta, omega, SF="HG", g1=g1) # to be replaced with reflectivity model
 		dq = z * np.exp(-z*t) * (1-rho) * q
 		return dq
 	else:
