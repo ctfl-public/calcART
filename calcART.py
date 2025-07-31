@@ -11,7 +11,148 @@ mydir = os.path.join(os.getcwd(), "dump")
 if not os.path.exists(mydir):
     os.makedirs(mydir)
 
-def calc_dqrad(kappa, sigma_sca, T, outputName=None, limits=[0, 1], \
+def calc_dq(kappa:float, sigma_sca:float, T:str|float, outputName=None, limits=[0, 1], \
+            size=1 , nRays=1000, SF='LA', g1=0, \
+            nonhomogeneous=False, \
+            in_rad=0.0, \
+            machine = "serial", \
+            cmdargs = ["-screen","none"]):
+    """
+    Calculate divergence of radiative heat flux (Dqrad, W/m3) of a medium slab 
+    confined between: 
+    - ylo: black surfaces.
+    - yhi: black surface with radiation input (in_rad). 
+
+    Temperatures of ylo and yhi black surfaces are T, if T is float, or T[0], if T is MR_profile path.
+
+    Args:
+        kappa (float): Absorption coefficient.
+        sigma_sca (float): Scattering coefficient.
+        T (float or str): Temperature of the medium, can be a constant value or a file.
+            file should contain x, T if nonhomogeneous is False,
+            or x, T, kappa, sigma_sca if nonhomogeneous is True.
+        outputName (str): Name of output file (includes extension). 
+            if None, output is renamed to default name. (default is None).
+        limits (list): [ylo, yhi] limits of the grid in y direction.
+        size (int): Size of the grid along y axis (default is 1).
+        nRays (int): Number of rays to be emitted from each cell (default is 1000).
+        SF (str): Scattering function, 'LA' for Linear Anisotropic, 'HG' for Henyey-Greenstein.
+        g1 (float): Anisotropy factor for LA or HG.
+        nonhomogeneous (bool): If True, T_profile is a file with x, T, kappa, and sigma_sca values. 
+        in_rad (float): Radiation input value.
+        machine (str): Name of the machine used to run sparta, e.g., "serial", "serial_debug".
+        cmdargs (list): Additional command line arguments for sparta.
+
+    Returns:
+        tuple: A tuple containing two lists:
+            - yc (list): Y-coordinate values
+            - dqrad (list): Radiative heat flux values (negated from file)
+                positive values indicate incoming radiation (heat gain),
+                negative values indicate outgoing radiation (heat loss).
+    """
+    
+    D = abs(limits[1] - limits[0])
+    if not outputName:
+        outputName = f"T{T}-abs{kappa:0.0f}-sca{sigma_sca:0.0f}-{SF}-g1{g1:0.3f}-D{D:0.3f}-size{size}-nRays{nRays}-inrad{in_rad:0.1e}.dqrad"
+    outfile = os.path.join(mydir,outputName)
+
+    # skip runing of file exists
+    if os.path.exists(outfile) and os.path.getsize(outfile) > 0:
+        print(f"Case already exists and is not empty: {outfile}")
+        return read_dqrad(outputName)
+
+    if isinstance(T, str):
+        MR_profile = T
+        T = 0 
+        # read MRProfile and assign Tlo and Thi
+        xMR, T_xMR = readMRProfile(MR_profile)
+        Tlo = np.interp(limits[0], xMR, T_xMR)
+        Thi = np.interp(limits[1], xMR, T_xMR)
+    else:
+        MR_profile = None
+        Tlo = T
+        Thi = T
+
+    if (in_rad):
+        Thi = (in_rad/SIGMA)**0.25 
+
+    spa = sparta(machine, cmdargs) 
+
+    spa.command("seed 8887435")
+    spa.command("units si")
+    spa.command("dimension 3")
+    spa.command("boundary ss ss ss")
+
+    if (SF == 'LA'): # Linear Anisotropic
+        spa.command("global radiation RMCRT pathlength 1 \
+        sigma_sca " + str(sigma_sca) + " g1 " + str(g1) +" kappa " + str(kappa) +  " T " + str(T))
+    elif (SF == 'HG'):  # Henyey-Greenstein
+        spa.command("global radiation RMCRT pathlength 1 \
+        sigma_sca " + str(sigma_sca) + " HG g1 "+ str(g1) +" kappa " + str(kappa) +  " T " + str(T))
+    else:
+        sys.exit(SF+" is not recognized.")
+
+    spa.command("photon_continuous none constant")
+    spa.command("create_box -1 1 " + int2str(limits) + " -1 1")
+    spa.command("create_grid 1 " + str(size) + " 1 block * * *")
+
+    if (type(MR_profile) is str):
+        # variable kappa and sigma, file contains x, T, kappa, and sigma
+        if nonhomogeneous: 
+            spa.command("global MR " + MR_profile)
+        # constant kappa and sigma, file contains only x and T
+        else: 
+            spa.command("global T MR " + MR_profile)
+
+    spa.command("timestep 0.5")
+    spa.command("balance_grid rcb part")
+
+    # black surface
+    spa.command("surf_collide 1 radiationboundary epsilon 1 rho_s 0 rho_d 0 temp "+ str(Thi))
+    # cold black surface
+    spa.command("surf_collide 2 radiationboundary epsilon 1 rho_s 0 rho_d 0 temp "+ str(Tlo))
+    # cold mirror surface
+    spa.command("surf_collide 3 radiationboundary epsilon 0 rho_s 1 rho_d 0 temp 0")
+
+    # hack to delete photon
+    spa.command("surf_react 1 global 1.0 0.0")
+
+    # assign collide modules
+    spa.command("bound_modify yhi collide 1 react 1")
+    spa.command("bound_modify ylo collide 2 react 1")
+    spa.command("bound_modify xlo xhi zlo zhi collide 3 react 1")
+
+    spa.command("create_photons npc " + str(nRays) + " xzCenter")
+
+    spa.command("stats 5000")
+    spa.command("run 1")
+    spa.command("dump 1 grid all 999999999 " + outfile + " yc Dqrad")
+    spa.command("run 200000000")
+
+    spa.close()
+
+    return read_dqrad(outputName)
+
+
+def readMRProfile(file):
+		with open(file, 'r') as f:
+			lines = f.readlines()
+		# Initialize lists for storing the data
+		x_values = []
+		y_values = []
+		# Process the lines and extract the data from the first and second columns
+		for line in lines:
+			if not (line.startswith(' #') or line.startswith('#')):
+				columns = line.split()
+				x_values.append(float(columns[0]))
+				y_values.append(float(columns[1]))
+		xMR = np.array(x_values)
+		T_xMR = np.array(y_values)
+
+		return xMR, T_xMR
+
+
+def calc_dqrad(kappa, sigma_sca, T:str|float, outputName=None, limits=[0, 1], \
                 size=1 , nRays=1000, SF='LA', g1=0, \
                 nonhomogeneous=False, \
                 in_rad=0, \
@@ -140,8 +281,11 @@ def calc_dq_equilibrium(kappa:float, sigma_sca:float, T:float, outputName=None, 
         g1 (float): Anisotropy factor for LA or HG.
 
     Returns:
-        None. Writes output to a file in the mydir directory.
-        The output file contains yc and Dqrad values.
+        tuple: A tuple containing two lists:
+            - yc (list): Y-coordinate values
+            - dqrad (list): Radiative heat flux values (negated from file)
+                positive values indicate incoming radiation (heat gain),
+                negative values indicate outgoing radiation (heat loss).
     """
     
     D = abs(limits[1] - limits[0])
