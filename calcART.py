@@ -18,10 +18,11 @@ def calc_dqrad(kappa, sigma_sca, T, outputName=None, limits=[0, 1], \
                 machine = "serial", \
                 cmdargs = ["-screen","none"]):
     """
-    Calculate divergence of radiative heat flux (Dqrad, W/m3).
-
-    The medium is confined between ylo and yhi in y direction;
-    ylo is cold black surface, yhi is black surface with {in_rad} radiation input.
+    Calculate divergence of radiative heat flux (Dqrad, W/m3) of a medium slab 
+    confined between: 
+    - ylo: cold black surfaces
+    - yhi: black surface with radiation input (in_rad). If in_rad = 0, 
+    the top surface is also a cold black surface.
 
     Args:
         kappa (float): Absorption coefficient.
