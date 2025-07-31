@@ -114,6 +114,93 @@ def calc_dqrad(kappa, sigma_sca, T, outputName=None, limits=[0, 1], \
 
     spa.close()
 
+
+def calc_dq_equilibrium(kappa:float, sigma_sca:float, T:float, outputName=None, limits=[0, 1], \
+                size=1 , nRays=1000, SF='LA', g1=0, \
+                machine = "serial", \
+                cmdargs = ["-screen","none"]):
+    """
+    Calculate divergence of radiative heat flux (Dqrad, W/m3). 
+    The slab medium is isothemal and in equilibrium with the surrounding.
+
+    The medium is confined between ylo and yhi in y direction;
+    ylo is cold black surface, yhi is black surface with {in_rad} radiation input.
+
+    Args:
+        kappa (float): Absorption coefficient.
+        sigma_sca (float): Scattering coefficient.
+        T (float): Temperature of the medium. (constant)
+        outputName (str): Name of output file (includes extension). 
+            if None, output is renamed to default name. (default is None).
+        limits (list): [ylo, yhi] limits of the grid in y direction.
+        size (int): Size of the grid along y axis (default is 1).
+        nRays (int): Number of rays to be emitted from each cell (default is 1000).
+        SF (str): Scattering function, 'LA' for Linear Anisotropic, 'HG' for Henyey-Greenstein.
+        g1 (float): Anisotropy factor for LA or HG.
+
+    Returns:
+        None. Writes output to a file in the mydir directory.
+        The output file contains yc and Dqrad values.
+    """
+    
+    D = abs(limits[1] - limits[0])
+    if not outputName:
+        outputName = f"T{T}-abs{kappa:0.0f}-sca{sigma_sca:0.0f}-{SF}-g1{g1:0.3f}-D{D:0.3f}-size{size}-nRays{nRays}.dqequilibrium"
+    outfile = os.path.join(mydir,outputName)
+
+    # skip runing of file exists
+    if os.path.exists(outfile) and os.path.getsize(outfile) > 0:
+        print(f"Case already exists and is not empty: {outfile}")
+        return read_dqrad(outputName)
+
+    # change to your machine name used to compile sparta: "serial", "serial_debug", ..
+    spa = sparta(machine, cmdargs) 
+
+    spa.command("seed 8887435")
+    spa.command("units si")
+    spa.command("dimension 3")
+    spa.command("boundary ss ss ss")
+
+    if (SF == 'LA'): # Linear Anisotropic
+        spa.command("global radiation RMCRT pathlength 1 \
+        sigma_sca " + str(sigma_sca) + " g1 " + str(g1) +" kappa " + str(kappa) +  " T " + str(T))
+    elif (SF == 'HG'):  # Henyey-Greenstein
+        spa.command("global radiation RMCRT pathlength 1 \
+        sigma_sca " + str(sigma_sca) + " HG g1 "+ str(g1) +" kappa " + str(kappa) +  " T " + str(T))
+    else:
+        sys.exit(SF+" is not recognized.")
+
+    spa.command("photon_continuous none constant")
+    spa.command("create_box -1 1 " + int2str(limits) + " -1 1")
+    spa.command("create_grid 1 " + str(size) + " 1 block * * *")
+
+    spa.command("timestep 0.5")
+    spa.command("balance_grid rcb part")
+
+    # black surface
+    spa.command("surf_collide 1 radiationboundary epsilon 1 rho_s 0 rho_d 0 temp "+ str(T))
+    # cold mirror surface
+    spa.command("surf_collide 2 radiationboundary epsilon 0 rho_s 1 rho_d 0 temp 0")
+
+    # hack to delete photon
+    spa.command("surf_react 1 global 1.0 0.0")
+
+    # assign collide modules
+    spa.command("bound_modify ylo yhi collide 1 react 1")
+    spa.command("bound_modify xlo xhi zlo zhi collide 2 react 1")
+
+    spa.command("create_photons npc " + str(nRays) + " xzCenter")
+
+    spa.command("stats 5000")
+    spa.command("run 1")
+    spa.command("dump 1 grid all 999999999 " + outfile + " yc Dqrad")
+    spa.command("run 200000000")
+
+    spa.close()
+
+    return read_dqrad(outputName)
+
+
 def int2str(intList):
     """
     Convert list of integers/floats to space separated string.
