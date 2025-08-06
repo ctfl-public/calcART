@@ -118,23 +118,25 @@ class art(base):
 	@property
 	def dq_medium_term(self):
 		if self._dq_medium_term is None:
-			dt = self.D/(len(self.xMR)-1)
+			dt = self.D/(len(self.xMR)) # MR cell thickness
 			dq_medium_xMR = []
 			for i in range(len(self.xMR)):
 				q_pos = 0.0
 				q_neg = 0.0
-				if i != len(self.xMR)-1:
+				if i != len(self.xMR)-1: # omit last cell
 					D = dt * (len(self.xMR)-i-1) # slab thickness
-					q_pos = calc_EWET(t=D-self.xMR[i+1:],
+					t = self.xMR[i+1:] - (self.xMR[i] + dt/2)
+					q_pos = calc_EWET(	t=t,
 										T=self.T_xMR[i+1:],
 										beta=self.beta,
 										omega=self.omega,
 										SF=self.SF,
 										g1=self.g1,
 										D=D)
-				if i != 0:
+				if i != 0: # omit first cell
 					D = dt * i
-					q_neg = calc_EWET(t=D-self.xMR[0:i],
+					t = (self.xMR[i] - dt/2) - self.xMR[0:i]
+					q_neg = calc_EWET(	t=t,
 										T=self.T_xMR[0:i],
 										beta=self.beta,
 										omega=self.omega,
@@ -151,7 +153,7 @@ class art(base):
 							D=dt)
 				)
 			dq_medium_xMR = np.array(dq_medium_xMR)
-			dq_medium_x = np.interp(self.x, self.xMR, dq_medium_xMR)
+			dq_medium_x = np.interp(self.x, self.xMR, dq_medium_xMR) # this should not be linear interpolation
 			self._dq_medium_term = dq_medium_x
 		return self._dq_medium_term
 
