@@ -83,6 +83,10 @@ class art(base):
 	@property
 	def dq_RMCRT(self):
 		if self._dq_RMCRT is None:
+			print("Calculating dq_RMCRT...")
+			print(f"\text={self.beta}, omega={self.omega}, SF={self.SF}, g1={self.g1}, D={self.D}\n" + \
+		 			f"\tT={self.T if self.T is not None else self.MR_profile}, in_rad={self.in_rad}\n" + \
+					f"\tsize={self.size}, nRays={self.nRays}")	
 			_, self._dq_RMCRT = calc_dq(kappa=self.kappa,
 											sigma_sca=self.sigma,
 											T=self.MR_profile if self.MR_profile else self.T,
@@ -160,5 +164,9 @@ class art(base):
 	@property
 	def dq_model(self):
 		if self._dq_model is None:
+			print("Calculating dq_model...")
+			print(f"\text={self.beta}, omega={self.omega}, SF={self.SF}, g1={self.g1}, D={self.D}\n" + \
+		 			f"\tT={self.T if self.T is not None else self.MR_profile}, in_rad={self.in_rad}\n" + \
+					f"\tsize={self.size}, nRays={self.nRays}")
 			self._dq_model = self.dq_cooling_term - self.dq_gas_term - self.dq_medium_term
 		return self._dq_model

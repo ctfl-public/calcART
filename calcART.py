@@ -58,7 +58,7 @@ def calc_dq(kappa:float, sigma_sca:float, T:str|float, outputName=None, limits=[
 
     # skip runing of file exists
     if os.path.exists(outfile) and os.path.getsize(outfile) > 0:
-        print(f"Case already exists and is not empty: {outfile}")
+        # print(f"Case already exists and is not empty: {outfile}")
         return read_dqrad(outputName)
 
     if isinstance(T, str):
@@ -193,7 +193,7 @@ def calc_dqrad(kappa, sigma_sca, T:str|float, outputName=None, limits=[0, 1], \
 
     # skip runing of file exists
     if os.path.exists(outfile) and os.path.getsize(outfile) > 0:
-        print(f"Case already exists and is not empty: {outfile}")
+        #print(f"Case already exists and is not empty: {outfile}")
         return
     
     T_profile = T
@@ -295,7 +295,7 @@ def calc_dq_equilibrium(kappa:float, sigma_sca:float, T:float, outputName=None, 
 
     # skip runing of file exists
     if os.path.exists(outfile) and os.path.getsize(outfile) > 0:
-        print(f"Case already exists and is not empty: {outfile}")
+        #print(f"Case already exists and is not empty: {outfile}")
         return read_dqrad(outputName)
 
     # change to your machine name used to compile sparta: "serial", "serial_debug", ..
@@ -442,9 +442,7 @@ def calc_trans(thickness, ext, omega,
     else:
         outfile = os.path.join(mydir,f"ext{ext:.0f}-sigma{sigma_sca:.0f}-HG-g{g1:0.3f}-th{thickness*1000:.3f}.trans")
 
-    if os.path.exists(outfile) and os.path.getsize(outfile) > 0:
-        print(f"Case already exists and is not empty: {outfile}")
-    else:
+    if not (os.path.exists(outfile) and os.path.getsize(outfile) > 0):
         spa = sparta(machine, cmdargs) 
 
         spa.command("seed 8887435")
@@ -577,9 +575,7 @@ def calc_ref(thickness, ext, omega,
     else:
         outfile = os.path.join(mydir,f"ext{ext:.0f}-sigma{sigma_sca:.0f}-HG-g{g1:0.3f}-th{thickness*1000:.3f}.ref")
 
-    if os.path.exists(outfile) and os.path.getsize(outfile) > 0:
-        print(f"Case already exists and is not empty: {outfile}")
-    else:
+    if not (os.path.exists(outfile) and os.path.getsize(outfile) > 0):
         spa = sparta(machine, cmdargs) 
 
         spa.command("seed 8887435")
@@ -709,9 +705,7 @@ def calc_abs(thickness, ext, omega,
     else:
         outfile = os.path.join(mydir,f"ext{ext:.0f}-sigma{sigma_sca:.0f}-HG-g{g1:0.3f}-th{thickness*1000:.3f}.abs")
 
-    if os.path.exists(outfile) and os.path.getsize(outfile) > 0:
-        print(f"Case already exists and is not empty: {outfile}")
-    else:
+    if not (os.path.exists(outfile) and os.path.getsize(outfile) > 0):
         spa = sparta(machine, cmdargs) 
 
         spa.command("seed 8887435")
@@ -808,10 +802,7 @@ def calc_emission(ext, omega, T, limits=[0, 1], \
         T = 0
 
     # skip runing of file exists
-    if os.path.exists(outfile) and os.path.getsize(outfile) > 0:
-        print(f"Case already exists and is not empty: {outfile}")
-    else:
-
+    if not (os.path.exists(outfile) and os.path.getsize(outfile) > 0):
         spa = sparta(machine, cmdargs) 
 
         spa.command("seed 8887435")
