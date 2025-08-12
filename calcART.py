@@ -935,6 +935,7 @@ def calc_EWET(t:np.ndarray, T:np.ndarray, beta:float, omega:float, SF:str, g1:fl
 		T4 = np.average(np.power(T, 4), weights=rhos)
 		if eps is None:
 			eps = calc_abs(D, beta, omega, SF="HG", g1=g1) # to be replaced with emissivity model
+		# print(f"\t\t\tEWET: eps={eps}, T={T4**0.25:.2f} K")
 		return eps * SIGMA * T4
 	else:
 		raise NotImplementedError(f"SF={SF} not implemented")

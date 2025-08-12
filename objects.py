@@ -191,9 +191,9 @@ class art(base):
 	@property
 	def dq_model(self):
 		if self._dq_model is None:
-			print("Calculating dq_model...")
-			print(f"\text={self.beta}, omega={self.omega}, SF={self.SF}, g1={self.g1}, D={self.D}\n" + \
-		 			f"\tT={self.T if self.T is not None else self.MR_profile}, in_rad={self.in_rad}\n" + \
-					f"\tsize={self.size}, nRays={self.nRays}")
+			# print("Calculating dq_model...")
+			# print(f"\text={self.beta}, omega={self.omega}, SF={self.SF}, g1={self.g1}, D={self.D}\n" + \
+		 	# 		f"\tT={self.T if self.T is not None else self.MR_profile}, in_rad={self.in_rad}\n" + \
+			# 		f"\tsize={self.size}, nRays={self.nRays}")
 			self._dq_model = self.dq_cooling_term - self.dq_gas_term - self.dq_medium_term
 		return self._dq_model
