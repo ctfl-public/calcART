@@ -120,7 +120,21 @@ class art(base):
 	@property
 	def dq_cooling_term(self):
 		if self._dq_cooling_term is None:
-			self._dq_cooling_term = 4 * self.kappa * SIGMA * np.power(self.T_x, 4)
+			# self._dq_cooling_term = 4 * self.kappa * SIGMA * np.power(self.T_x, 4)
+			dq_cooling = []
+			for i in range(self.size):
+				q_out = 2* calc_EWET(
+					t=self.dx/2,
+					T=self.T_x[i],
+					beta=self.beta,
+					omega=self.omega,
+					SF=self.SF,
+					g1=self.g1,
+					D=self.dx
+				)
+				# dq_cooling_term.append(4*self.kappa*q_out)
+				dq_cooling.append(q_out/self.dx) # works better -> test different dx
+			self._dq_cooling_term = np.array(dq_cooling)
 		return self._dq_cooling_term
 
 	@property
