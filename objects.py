@@ -169,7 +169,7 @@ class art(base):
 							omega=self.omega,
 							SF=self.SF,
 							g1=self.g1,
-							D=self.dx)
+							D=self.dx)[0]
 				)
 			self._dq_medium_term = np.array(dq_medium)
 		return self._dq_medium_term
