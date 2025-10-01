@@ -263,7 +263,7 @@ def calc_dq_equilibrium(kappa:float, sigma_sca:float, T:float, outputName=None, 
                 cmdargs = ["-screen","none"]):
     """
     Calculate divergence of radiative heat flux (Dqrad, W/m3). 
-    The slab medium is isothemal and in equilibrium with the surrounding.
+    The slab medium is isothermal and in equilibrium with the surrounding.
 
     The medium is confined between ylo and yhi in y direction;
     ylo is cold black surface, yhi is black surface with {in_rad} radiation input.
