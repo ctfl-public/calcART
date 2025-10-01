@@ -61,6 +61,7 @@ class art(base):
 		self.xnorm = self.x / self.D
 		self._xnorm_RMCRT = None
 		self.t = self.D - self.x # distance from the radiating surface
+		self.tau_t = self.t * self.beta
 
 		if isinstance(T, str):
 			self.MR_profile = T
