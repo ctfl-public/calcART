@@ -77,8 +77,9 @@ class art(base):
 		self.nRays = nRays
 		self.in_rad = in_rad # applied at xhi
 
+		self._dq_RMCRT = None # corresponds to self.size_RMCRT
+		self._dq_model_xRMCRT = None
 		# All are func of self.x (not xMR), corresponds to self.size
-		self._dq_RMCRT = None
 		self._dq_model = None
 		self._dq_cooling_term = None
 		self._dq_gas_term = None
@@ -197,3 +198,11 @@ class art(base):
 			# 		f"\tsize={self.size}, nRays={self.nRays}")
 			self._dq_model = self.dq_cooling_term - self.dq_gas_term - self.dq_medium_term
 		return self._dq_model
+	
+	@property
+	def dq_model_xRMCRT(self):
+		if self._dq_model_xRMCRT is None:
+			if self.size_RMCRT > self.size:
+				raise ValueError("size_RMCRT must be less than or equal to size")
+			self._dq_model_xRMCRT = np.interp(self.x_RMCRT, self.x, self.dq_model)
+		return self._dq_model_xRMCRT
