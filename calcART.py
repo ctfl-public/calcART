@@ -4,12 +4,12 @@ from constants import SIGMA
 import sys
 import numpy as np
 import warnings
+from data_management import check_mydir, version_check
 
-# output directory name
-# mydir = os.path.join(os.getcwd(), datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S'))
-mydir = os.path.join(os.getcwd(), "dump")
-if not os.path.exists(mydir):
-    os.makedirs(mydir)
+# initialize data management
+mydir = check_mydir()
+version_check(mydir)
+
 
 def calc_dq(kappa:float, sigma_sca:float, T:str|float, outputName=None, limits=[0, 1], \
             size=1 , nRays=1000, SF='LA', g1=0, \
