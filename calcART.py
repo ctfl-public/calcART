@@ -4,11 +4,14 @@ from constants import SIGMA
 import sys
 import numpy as np
 import warnings
-from data_management import check_mydir, version_check
+from data_management import check_mydir, check_version_file
 
 # initialize data management
 mydir = check_mydir()
-version_check(mydir)
+custom_dir = check_version_file(mydir)
+if custom_dir:
+    mydir = custom_dir
+print(f"Data directory: {mydir}")
 
 
 def calc_dq(kappa:float, sigma_sca:float, T:str|float, outputName=None, limits=[0, 1], \
