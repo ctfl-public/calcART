@@ -4,13 +4,10 @@ from constants import SIGMA
 import sys
 import numpy as np
 import warnings
-from data_management import check_mydir, check_version_file
+from data_management import check_version_file
 
 # initialize data management
-mydir = check_mydir()
-custom_dir = check_version_file(mydir)
-if custom_dir:
-    mydir = custom_dir
+mydir = check_version_file()
 print(f"Data directory: {mydir}")
 
 
