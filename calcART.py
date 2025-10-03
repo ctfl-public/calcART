@@ -970,13 +970,13 @@ def calc_ED(q:float, t:np.ndarray, beta:float, omega:float, SF:str, g1:float, D:
 		for depth in t:
 			if depth*beta < 2:
 				# without using weights (favors near surface fitting)
-				c.append([1.74447467, -0.9899896,  -0.46715914,  4.30635443, 
-						-0.7545377,   0.57699982,  1.38960422])
+				c.append([1.72663678, -0.9069527,  -0.50824652,  3.58694382, 
+						-0.814244,   0.60050496,  1.03772174])
 			else:
 				# with weights (favors indepth fitting)
-				c.append([1.2850711,  -0.48658091, -0.51118171,  4.87108912,
-              			-0.70981822,  0.46435636,  3.10418282])
-
+				c.append([1.24873659, -0.40734719, -0.55822928,  4.50490071, 
+						-0.74502176,  0.50163374,  2.79819811])
+               
 		c = np.array(c)
 		c0 = c[:, 0]
 		c1 = c[:, 1]
