@@ -53,7 +53,7 @@ def calc_dq(kappa:float, sigma_sca:float, T:str|float, outputName=None, limits=[
     
     D = abs(limits[1] - limits[0])
     if not outputName:
-        outputName = f"T{T}-abs{kappa:0.0f}-sca{sigma_sca:0.0f}-{SF}-g1{g1:0.3f}-D{D:0.3f}-size{size}-nRays{nRays}-inrad{in_rad:0.1e}.dq"
+        outputName = f"T{T}-abs{kappa:0.0f}-sca{sigma_sca:0.0f}-{SF}-g1{g1:0.3f}-D{D*1000:0.3f}mm-size{size}-nRays{nRays}-inrad{in_rad:0.1e}.dq"
     outfile = os.path.join(mydir,outputName)
 
     # skip runing of file exists
