@@ -967,15 +967,45 @@ def calc_ED(q:float, t:np.ndarray, beta:float, omega:float, SF:str, g1:float, D:
 	if isinstance(t, (int, float)):
 		t = np.array([t])
 	if SF == "HG":
+		ps = [
+				[ 1.77884405, -1.13756974, -0.36217746,  5.55132145], # 0-1
+				[ 1.57960717, -0.6777506 , -0.74774612,  4.79422544], # 1-2
+				[ 1.44528636, -0.54006825, -0.55390418,  3.52680565], # 2-3
+				[ 1.36353177, -0.46856152, -0.56847874,  3.6571423 ], # 3-4
+				[ 1.3200944 , -0.42218924, -0.5772813 ,  3.74555988], # 4-5
+				[ 1.28631732, -0.39120893, -0.57786769,  3.78667048], # 5-6
+				[ 1.25772036, -0.35609818, -0.59024459,  3.84002667], # 6-7
+				[ 1.24058056, -0.33290104, -0.5907199 ,  3.78264772], # 7-8
+				[ 1.22117114, -0.30836225, -0.60002478,  3.82127599], # 8-9
+				[ 1.20713594, -0.30767672, -0.59445799,  3.98231551],  # 9-10
+				[ 1.19737132, -0.284375  , -0.5953926 ,  3.83161967],  # 10-11
+				]
+		ps = np.array(ps)
 		for depth in t:
-			if depth*beta < 2:
-				# without using weights (favors near surface fitting)
-				c.append([1.72663678, -0.9069527,  -0.50824652,  3.58694382, 
-						-0.814244,   0.60050496,  1.03772174])
+			tau_t = depth * beta
+			if tau_t <= 1:
+				c.append(np.concatenate([ps[0], [0, 0, 0]]))
+			elif tau_t <= 2:
+				c.append(np.concatenate([ps[1], [0, 0, 0]]))
+			elif tau_t <= 3:
+				c.append(np.concatenate([ps[2], [0, 0, 0]]))
+			elif tau_t <= 4:
+				c.append(np.concatenate([ps[3], [0, 0, 0]]))
+			elif tau_t <= 5:
+				c.append(np.concatenate([ps[4], [0, 0, 0]]))
+			elif tau_t <= 6:
+				c.append(np.concatenate([ps[5], [0, 0, 0]]))
+			elif tau_t <= 7:
+				c.append(np.concatenate([ps[6], [0, 0, 0]]))
+			elif tau_t <= 8:
+				c.append(np.concatenate([ps[7], [0, 0, 0]]))
+			elif tau_t <= 9:
+				c.append(np.concatenate([ps[8], [0, 0, 0]]))
+			elif tau_t <= 10:
+				c.append(np.concatenate([ps[9], [0, 0, 0]]))
 			else:
-				# with weights (favors indepth fitting)
-				c.append([1.24873659, -0.40734719, -0.55822928,  4.50490071, 
-						-0.74502176,  0.50163374,  2.79819811])
+				c.append(np.concatenate([ps[10], [0, 0, 0]]))
+			
                
 		c = np.array(c)
 		c0 = c[:, 0]
