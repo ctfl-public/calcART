@@ -134,6 +134,81 @@ def calc_dq(kappa:float, sigma_sca:float, T:str|float, outputName=None, limits=[
     return read_dqrad(outputName)
 
 
+def calc_dq_cooling(kappa:float, sigma_sca:float, T:float, D:float, \
+			nRays=1000, SF='LA', g1=0, \
+            machine = "serial", \
+            cmdargs = ["-screen","none"]):
+    """
+    Calculate divergence of radiative heat flux of infinite slab of thickness D at temperature T surrounded by old black medium.
+    
+    Args:
+		kappa (float): Absorption coefficient.
+		sigma_sca (float): Scattering coefficient.
+		T (float): Temperature of the medium. (constant)
+		D (float): Thickness of the slab.
+		nRays (int): Number of rays to be emitted from each cell (default is 1000).
+		SF (str): Scattering function, 'LA' for Linear Anisotropic, 'HG' for Henyey-Greenstein.
+		g1 (float): Anisotropy factor for LA or HG.
+          
+    Returns:
+		float: Dqrad (W/m3) value. Positive values indicate heat loss.
+    """
+
+    outputName = f"T{T:0.4f}-abs{kappa:0.0f}-sca{sigma_sca:0.0f}-{SF}-g1{g1:0.3f}-D{D*1e6:0.3f}microns-nRays{nRays:0.0f}.dq_cooling"
+    outfile = os.path.join(mydir,outputName)
+
+    # skip runing of file exists
+    if os.path.exists(outfile) and os.path.getsize(outfile) > 0:
+        # print(f"Case already exists and is not empty: {outfile}")
+        return read_prop(outfile)
+
+    spa = sparta(machine, cmdargs) 
+
+    spa.command("seed 8887435")
+    spa.command("units si")
+    spa.command("dimension 3")
+    spa.command("boundary ss ss ss")
+
+    if (SF == 'LA'): # Linear Anisotropic
+        spa.command("global radiation RMCRT pathlength 1 \
+        sigma_sca " + str(sigma_sca) + " g1 " + str(g1) +" kappa " + str(kappa) +  " T " + str(T))
+    elif (SF == 'HG'):  # Henyey-Greenstein
+        spa.command("global radiation RMCRT pathlength 1 \
+        sigma_sca " + str(sigma_sca) + " HG g1 "+ str(g1) +" kappa " + str(kappa) +  " T " + str(T))
+    else:
+        sys.exit(SF+" is not recognized.")
+
+    spa.command("photon_continuous none constant")
+    spa.command("create_box -1 1 0 " + int2str(D) + " -1 1")
+    spa.command("create_grid 1 1 1 block * * *")
+
+    spa.command("timestep 0.5")
+    spa.command("balance_grid rcb part")
+
+    # old black surface
+    spa.command("surf_collide 1 radiationboundary epsilon 1 rho_s 0 rho_d 0 temp 0")
+    # cold mirror surface
+    spa.command("surf_collide 2 radiationboundary epsilon 0 rho_s 1 rho_d 0 temp 0")
+
+    # hack to delete photon
+    spa.command("surf_react 1 global 1.0 0.0")
+
+    # assign collide modules
+    spa.command("bound_modify ylo yhi collide 1 react 1")
+    spa.command("bound_modify xlo xhi zlo zhi collide 2 react 1")
+
+    spa.command("create_photons npc " + str(nRays) + " xzCenter")
+
+    spa.command("stats 5000")
+    spa.command("run 1")
+    spa.command("dump 1 grid all 999999999 " + outfile + " id xc yc zc Dqrad countEmitted")
+    spa.command("run 200000000")
+
+    spa.close()
+
+    return read_prop(outfile)
+
+
 def readMRProfile(file):
 		with open(file, 'r') as f:
 			lines = f.readlines()

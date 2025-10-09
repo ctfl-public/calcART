@@ -85,6 +85,7 @@ class art(base):
 		self._dq_cooling_term = None
 		self._dq_gas_term = None
 		self._dq_medium_term = None
+		self._dq_cooling_RMCRT = None
 
 	@property
 	def x_RMCRT(self):
@@ -129,6 +130,24 @@ class art(base):
 								g1=self.g1)
 			self._dq_cooling_term = np.array(2*eps*SIGMA*np.power(self.T_x, 4)/self.dx)
 		return self._dq_cooling_term
+	
+
+	@property
+	def dq_cooling_RMCRT(self):
+		if self._dq_cooling_RMCRT is None:
+			dq_cooling = []
+			for i in range(self.size):
+				dq_cooling.append(
+					calc_dq_cooling(kappa=self.kappa,
+									sigma_sca=self.sigma,
+									T=self.T_x[i],
+									D=self.dx,
+									SF=self.SF,
+									g1=self.g1,
+									nRays=self.nRays)
+				)
+			self._dq_cooling_RMCRT = np.array(dq_cooling)
+		return self._dq_cooling_RMCRT
 
 	@property
 	def dq_gas_term(self):
