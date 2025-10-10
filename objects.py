@@ -78,14 +78,17 @@ class art(base):
 		self.nRays = nRays
 		self.in_rad = in_rad # applied at xhi
 
-		self._dq_RMCRT = None # corresponds to self.size_RMCRT
+		# corresponds to self.size_RMCRT
+		self._dq_RMCRT = None 
 		self._dq_model_xRMCRT = None
+
 		# All are func of self.x (not xMR), corresponds to self.size
 		self._dq_model = None
 		self._dq_cooling_term = None
 		self._dq_gas_term = None
 		self._dq_medium_term = None
 		self._dq_cooling_RMCRT = None
+		self._dq_medium_RMCRT = None
 
 	@property
 	def x_RMCRT(self):
@@ -148,6 +151,28 @@ class art(base):
 				)
 			self._dq_cooling_RMCRT = np.array(dq_cooling)
 		return self._dq_cooling_RMCRT
+	
+
+	@property
+	def dq_medium_RMCRT(self):
+		if self._dq_medium_RMCRT is None:
+			print("Calculating dq_medium_RMCRT...")
+			print(f"\text={self.beta}, omega={self.omega}, SF={self.SF}, g1={self.g1}, D={self.D}\n" + \
+		 			f"\tT={self.T if self.T is not None else self.MR_profile}\n" + \
+					f"\tsize={self.size}, nRays={self.nRays}")
+			self._dq_medium_RMCRT = calc_dq_medium(
+										kappa=self.kappa,
+										sigma_sca=self.sigma,
+										T=self.MR_profile if self.MR_profile else self.T,
+										limits=[0,self.D],
+										size=self.size,
+										nRays=self.nRays,
+										SF=self.SF,
+										g1=self.g1,
+										nonhomogeneous=False,
+										)
+		return self._dq_medium_RMCRT
+
 
 	@property
 	def dq_gas_term(self):

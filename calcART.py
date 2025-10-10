@@ -134,6 +134,125 @@ def calc_dq(kappa:float, sigma_sca:float, T:str|float, outputName=None, limits=[
     return read_dqrad(outputName)
 
 
+def calc_dq_medium(kappa:float, sigma_sca:float, T:str|float, outputName=None, limits=[0, 1], \
+            size=1 , nRays=1000, SF='LA', g1=0, \
+            nonhomogeneous=False, \
+            machine = "serial", \
+            cmdargs = ["-screen","none"]):
+    """
+    Calculate divergence of radiative heat flux (Dqrad, W/m3) from neighboring cells
+    of a medium slab confined between 2 cold black plates.
+
+    Args:
+        kappa (float): Absorption coefficient.
+        sigma_sca (float): Scattering coefficient.
+        T (float or str): Temperature of the medium, can be a constant value or a file.
+            file should contain x, T if nonhomogeneous is False,
+            or x, T, kappa, sigma_sca if nonhomogeneous is True.
+        outputName (str): Name of output file (includes extension). 
+            if None, output is renamed to default name. (default is None).
+        limits (list): [ylo, yhi] limits of the grid in y direction.
+        size (int): Size of the grid along y axis (default is 1).
+        nRays (int): Number of rays to be emitted from each cell (default is 1000).
+        SF (str): Scattering function, 'LA' for Linear Anisotropic, 'HG' for Henyey-Greenstein.
+        g1 (float): Anisotropy factor for LA or HG.
+        nonhomogeneous (bool): If True, T_profile is a file with x, T, kappa, and sigma_sca values.
+        machine (str): Name of the machine used to run sparta, e.g., "serial", "serial_debug".
+        cmdargs (list): Additional command line arguments for sparta.
+
+    Returns:
+		list: divergence of radiative heat flux values
+			positive values indicate incoming radiation (heat gain),
+			negative values indicate outgoing radiation (heat loss).
+    """
+    
+    D = abs(limits[1] - limits[0])
+    if not outputName:
+        outputName = f"T{T}-abs{kappa:0.0f}-sca{sigma_sca:0.0f}-{SF}-g1{g1:0.3f}-D{D*1000:0.3f}mm-size{size:0.0f}-nRays{nRays:0.0f}.dq_medium"
+    outfile = os.path.join(mydir,outputName)
+
+    # skip runing of file exists
+    if os.path.exists(outfile) and os.path.getsize(outfile) > 0:
+        # print(f"Case already exists and is not empty: {outfile}")
+        _, I = read_dqrad(outputName)
+        dq_medium = -4*np.pi*kappa*np.array(I)  
+        return dq_medium
+
+    if isinstance(T, str):
+        MR_profile = T
+        T = 0 
+        # # read MRProfile and assign Tlo and Thi
+        # xMR, T_xMR = readMRProfile(MR_profile)
+        # Tlo = np.interp(limits[0], xMR, T_xMR)
+        # Thi = np.interp(limits[1], xMR, T_xMR)
+    else:
+        MR_profile = None
+        # Tlo = T
+        # Thi = T
+        
+    Tlo = 0
+    Thi = 0
+
+    spa = sparta(machine, cmdargs) 
+
+    spa.command("seed 8887435")
+    spa.command("units si")
+    spa.command("dimension 3")
+    spa.command("boundary ss ss ss")
+
+    if (SF == 'LA'): # Linear Anisotropic
+        spa.command("global radiation RMCRT pathlength 1 \
+        sigma_sca " + str(sigma_sca) + " g1 " + str(g1) +" kappa " + str(kappa) +  " T " + str(T))
+    elif (SF == 'HG'):  # Henyey-Greenstein
+        spa.command("global radiation RMCRT pathlength 1 \
+        sigma_sca " + str(sigma_sca) + " HG g1 "+ str(g1) +" kappa " + str(kappa) +  " T " + str(T))
+    else:
+        sys.exit(SF+" is not recognized.")
+
+    spa.command("photon_continuous none constant")
+    spa.command("create_box -1 1 " + int2str(limits) + " -1 1")
+    spa.command("create_grid 1 " + str(size) + " 1 block * * *")
+
+    if (type(MR_profile) is str):
+        # variable kappa and sigma, file contains x, T, kappa, and sigma
+        if nonhomogeneous: 
+            spa.command("global MR " + MR_profile)
+        # constant kappa and sigma, file contains only x and T
+        else: 
+            spa.command("global T MR " + MR_profile)
+
+    spa.command("timestep 0.5")
+    spa.command("balance_grid rcb part")
+
+    # black surface
+    spa.command("surf_collide 1 radiationboundary epsilon 1 rho_s 0 rho_d 0 temp "+ str(Thi))
+    # black surface
+    spa.command("surf_collide 2 radiationboundary epsilon 1 rho_s 0 rho_d 0 temp "+ str(Tlo))
+    # cold mirror surface
+    spa.command("surf_collide 3 radiationboundary epsilon 0 rho_s 1 rho_d 0 temp 0")
+
+    # hack to delete photon
+    spa.command("surf_react 1 global 1.0 0.0")
+
+    # assign collide modules
+    spa.command("bound_modify yhi collide 1 react 1")
+    spa.command("bound_modify ylo collide 2 react 1")
+    spa.command("bound_modify xlo xhi zlo zhi collide 3 react 1")
+
+    spa.command("create_photons npc " + str(nRays) + " xzCenter")
+
+    spa.command("stats 5000")
+    spa.command("run 1")
+    spa.command("dump 1 grid all 999999999 " + outfile + " yc I")
+    spa.command("run 200000000")
+
+    spa.close()
+
+    _, I = read_dqrad(outputName)
+    dq_medium = -4*np.pi*kappa*np.array(I)  
+    return dq_medium
+
+
 def calc_dq_cooling(kappa:float, sigma_sca:float, T:float, D:float, \
 			nRays=1000, SF='LA', g1=0, \
             machine = "serial", \
