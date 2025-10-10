@@ -258,7 +258,7 @@ def calc_dq_cooling(kappa:float, sigma_sca:float, T:float, D:float, \
             machine = "serial", \
             cmdargs = ["-screen","none"]):
     """
-    Calculate divergence of radiative heat flux of infinite slab of thickness D at temperature T surrounded by old black medium.
+    Calculate divergence of radiative heat flux of infinite slab of thickness D at temperature T surrounded by cold black medium.
     
     Args:
 		kappa (float): Absorption coefficient.
@@ -1142,7 +1142,7 @@ def calc_ED(q:float, t:np.ndarray, beta:float, omega:float, SF:str, g1:float, D:
 
 	Args:
 		q (float): Incident heat flux.
-		t (np.ndarray): Thickness of the slab.
+		t (np.ndarray): indepth distance from radiating surface.
 		beta (float): Absorption coefficient (1/m).
 		omega (float): Scattering coefficient (1/m).
 		SF (str): Scattering function type, e.g., "HG" for Henyey-Greenstein.
