@@ -52,6 +52,8 @@ def calc_dq(kappa:float, sigma_sca:float, T:str|float, outputName=None, limits=[
     """
     
     D = abs(limits[1] - limits[0])
+    if (D*1000 <= 0.001):
+        raise ValueError("Error: Thickness is too small, results may conflict.")
     if not outputName:
         outputName = f"T{T}-abs{kappa:0.0f}-sca{sigma_sca:0.0f}-{SF}-g1{g1:0.3f}-D{D*1000:0.3f}mm-size{size:0.0f}-nRays{nRays:0.0f}-inrad{in_rad:0.1e}.dq"
     outfile = os.path.join(mydir,outputName)
@@ -167,6 +169,9 @@ def calc_dq_medium(kappa:float, sigma_sca:float, T:str|float, outputName=None, l
     """
     
     D = abs(limits[1] - limits[0])
+    
+    if (D*1000 <= 0.001):
+        raise ValueError("Error: Thickness is too small, results may conflict.")
     if not outputName:
         outputName = f"T{T}-abs{kappa:0.0f}-sca{sigma_sca:0.0f}-{SF}-g1{g1:0.3f}-D{D*1000:0.3f}mm-size{size:0.0f}-nRays{nRays:0.0f}.dq_medium"
     outfile = os.path.join(mydir,outputName)
@@ -273,6 +278,9 @@ def calc_dq_cooling(kappa:float, sigma_sca:float, T:float, D:float, \
 		float: Dqrad (W/m3) value. Positive values indicate heat loss.
     """
 
+    
+    if (D*1e6 <= 0.001):
+        raise ValueError("Error: Thickness is too small, results may conflict.")
     outputName = f"T{T:0.4f}-abs{kappa:0.0f}-sca{sigma_sca:0.0f}-{SF}-g1{g1:0.3f}-D{D*1e6:0.3f}microns-nRays{nRays:0.0f}.dq_cooling"
     outfile = os.path.join(mydir,outputName)
 
@@ -381,6 +389,8 @@ def calc_dqrad(kappa, sigma_sca, T:str|float, outputName=None, limits=[0, 1], \
     """
     
     D = abs(limits[1] - limits[0])
+    if (D <= 0.001):
+        raise ValueError("Error: Thickness is too small, results may conflict.")
     if not outputName:
         outputName = f"T{T}-abs{kappa:0.0f}-sca{sigma_sca:0.0f}-{SF}-g1{g1:0.3f}-D{D:0.3f}-size{size:0.0f}-nRays{nRays:0.0f}-inrad{in_rad:0.1e}.dqrad"
     outfile = os.path.join(mydir,outputName)
@@ -483,6 +493,8 @@ def calc_dq_equilibrium(kappa:float, sigma_sca:float, T:float, outputName=None, 
     """
     
     D = abs(limits[1] - limits[0])
+    if (D <= 0.001):
+        raise ValueError("Error: Thickness is too small, results may conflict.")
     if not outputName:
         outputName = f"T{T}-abs{kappa:0.0f}-sca{sigma_sca:0.0f}-{SF}-g1{g1:0.3f}-D{D:0.3f}-size{size}-nRays{nRays}.dqequilibrium"
     outfile = os.path.join(mydir,outputName)
@@ -630,7 +642,9 @@ def calc_trans(thickness, ext, omega,
     
     sigma_sca = ext * omega
     kappa = ext * (1-omega)
-
+    
+    if (thickness*1000 <= 0.001):
+        raise ValueError("Error: Thickness is too small, results may conflict.")
     if (SF == 'LA'):
         outfile = os.path.join(mydir,f"ext{ext:.0f}-sigma{sigma_sca:.0f}-th{thickness*1000:.3f}.trans")
     else:
@@ -764,6 +778,8 @@ def calc_ref(thickness, ext, omega,
     sigma_sca = ext * omega
     kappa = ext * (1-omega)
 
+    if (thickness*1000 <= 0.001):
+        raise ValueError("Error: Thickness is too small, results may conflict.")
     if (SF == 'LA'):
         outfile = os.path.join(mydir,f"ext{ext:.0f}-sigma{sigma_sca:.0f}-th{thickness*1000:.3f}.ref")
     else:
@@ -894,6 +910,8 @@ def calc_abs(thickness, ext, omega,
     sigma_sca = ext * omega
     kappa = ext * (1-omega)
 
+    if (thickness*1000 <= 0.001):
+        raise ValueError("Error: Thickness is too small, results may conflict.")
     if (SF == 'LA'):
         outfile = os.path.join(mydir,f"ext{ext:.0f}-sigma{sigma_sca:.0f}-th{thickness*1000:.3f}.abs")
     else:
@@ -989,6 +1007,8 @@ def calc_emission(ext, omega, T, limits=[0, 1], \
     kappa = ext * (1-omega)
     D = abs(limits[1] - limits[0])
 
+    if (D*1000 <= 0.001):
+        raise ValueError("Error: Thickness is too small, results may conflict.")
     outfile = os.path.join(mydir,f"T{T}-abs{kappa:0.0f}-sca{sigma_sca:0.0f}-{SF}-g1{g1:0.3f}-D{D*1000:0.3f}-size{size}-nRays{nRays}.emi")
 
     T_profile = T
