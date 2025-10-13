@@ -976,6 +976,7 @@ def calc_abs(thickness, ext, omega,
 def calc_emission(ext, omega, T, limits=[0, 1], \
                 size=1 , nRays=200000, SF='LA', g1=0, \
                 nonhomogeneous=False, \
+                outputName=None, \
                 machine = "serial", \
                 cmdargs = ["-screen","none"]):
     """
@@ -1009,13 +1010,15 @@ def calc_emission(ext, omega, T, limits=[0, 1], \
 
     if (D*1000 <= 0.001):
         raise ValueError("Error: Thickness is too small, results may conflict.")
-    outfile = os.path.join(mydir,f"T{T}-abs{kappa:0.0f}-sca{sigma_sca:0.0f}-{SF}-g1{g1:0.3f}-D{D*1000:0.3f}-size{size}-nRays{nRays}.emi")
+    if not outputName:
+        outputName = f"T{T}-abs{kappa:0.0f}-sca{sigma_sca:0.0f}-{SF}-g1{g1:0.3f}-D{D*1000:0.3f}-size{size}-nRays{nRays}.emi"
+    outfile = os.path.join(mydir, outputName)
 
     T_profile = T
     if (type(T) is str):
         T = 0
 
-    # skip runing of file exists
+    # skip runing if file exists
     if not (os.path.exists(outfile) and os.path.getsize(outfile) > 0):
         spa = sparta(machine, cmdargs) 
 
