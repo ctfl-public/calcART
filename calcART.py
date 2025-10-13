@@ -778,12 +778,12 @@ def calc_ref(thickness, ext, omega,
     sigma_sca = ext * omega
     kappa = ext * (1-omega)
 
-    if (thickness*1000 <= 0.001):
-        raise ValueError("Error: Thickness is too small, results may conflict.")
+    if (thickness*1e6 <= 0.001):
+        raise ValueError(f"Error: Thickness {thickness*1e6:.3f} microns is too small, results may conflict.")
     if (SF == 'LA'):
-        outfile = os.path.join(mydir,f"ext{ext:.0f}-sigma{sigma_sca:.0f}-th{thickness*1000:.3f}.ref")
+        outfile = os.path.join(mydir,f"ext{ext:.0f}-sigma{sigma_sca:.0f}-th{thickness*1e6:.3f}microns.ref")
     else:
-        outfile = os.path.join(mydir,f"ext{ext:.0f}-sigma{sigma_sca:.0f}-HG-g{g1:0.3f}-th{thickness*1000:.3f}.ref")
+        outfile = os.path.join(mydir,f"ext{ext:.0f}-sigma{sigma_sca:.0f}-HG-g{g1:0.3f}-th{thickness*1e6:.3f}microns.ref")
 
     if not (os.path.exists(outfile) and os.path.getsize(outfile) > 0):
         spa = sparta(machine, cmdargs) 
