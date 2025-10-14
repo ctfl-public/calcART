@@ -81,6 +81,7 @@ class art(base):
 		# corresponds to self.size_RMCRT
 		self._dq_RMCRT = None 
 		self._dq_model_xRMCRT = None
+		self._dq_gas_RMCRT = None
 
 		# All are func of self.x (not xMR), corresponds to self.size
 		self._dq_model = None
@@ -171,8 +172,26 @@ class art(base):
 										g1=self.g1,
 										nonhomogeneous=False,
 										)
+			print("\tDone.")
 		return self._dq_medium_RMCRT
 
+	@property
+	def dq_gas_RMCRT(self):
+		if self._dq_gas_RMCRT is None:
+			_, self._dq_gas_RMCRT = calc_dq(
+										kappa=self.kappa,
+										sigma_sca=self.sigma,
+										T=0.0,
+										limits=[0,self.D],
+										size=self.size_RMCRT,
+										nRays=self.nRays,
+										SF=self.SF,
+										g1=self.g1,
+										in_rad=self.in_rad
+										)
+			# multiply by -1 to reverse negation enforced in read_dqrad() called by calc_dq()
+			self._dq_gas_RMCRT = -np.array(self._dq_gas_RMCRT)
+		return self._dq_gas_RMCRT
 
 	@property
 	def dq_gas_term(self):
