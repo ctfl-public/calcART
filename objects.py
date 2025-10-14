@@ -224,6 +224,54 @@ class art(base):
 				)
 			self._dq_medium_term = np.array(dq_medium)
 		return self._dq_medium_term
+	
+	def _calc_emission(self, t:np.ndarray, T:np.ndarray, D:float, tag:str):
+		""" 
+		Wrapper for calc_emission() array of distances t and temperatures T.
+		It saves the temperature profile to a file if t is an array within a 'dump_profiles' directory.
+		
+		Args:
+			t (array): distances from the radiating surface
+			T (array): temperatures at distances t
+			D (float): slab thickness
+
+		Returns:
+			emission (float): calculated emission
+		"""
+		# print(f"Calculating emission for i{tag} = ", end=' ')
+
+		profileName = None
+		profileDir = "dump_profiles"
+		if not os.path.exists(profileDir):
+			os.makedirs(profileDir)
+
+		yc = D - t
+		if yc.size != 1:
+			# ensure yc is ascending
+			if yc[0] > yc[-1]:
+				yc = yc[::-1]
+				T = T[::-1]
+			profileName = os.path.join(profileDir, f"T{self.MR_profile}-i{tag}.T")
+			with open(profileName, 'w') as f:
+				f.write(f"#\n")
+				f.write(f"#\n")
+				f.write(f"#\n")
+				for yi, Ti in zip(yc, T):
+					f.write(f"{yi} {Ti}\n")
+
+		outputName = f"T{self.MR_profile}-i{tag}-abs{self.kappa:0.0f}-sca{self.sigma:0.0f}-{self.SF}-g1{self.g1:0.3f}-D{D*1e6:0.3f}microns-size{len(t)}-nRays{self.nRays}.emi"
+		emission = calc_emission(	ext=self.beta,
+									omega=self.omega,
+									T=profileName if profileName else T[0],
+									limits=[0,D],
+									size=len(t),
+									nRays=self.nRays,
+									SF=self.SF,
+									g1=self.g1,
+									outputName=outputName,
+							)
+		# print(emission)
+		return emission
 
 	@property
 	def dq_model(self):
