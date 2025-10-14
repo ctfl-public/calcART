@@ -264,13 +264,20 @@ class art(base):
 		if not os.path.exists(profileDir):
 			os.makedirs(profileDir)
 
+		if not self.MR_profile:
+			if T[0] != T[-1]:
+				raise ValueError("T must be constant when MR_profile is not provided.")
+			MR_profile = f"{T[0]:0.0f}const"
+		else:
+			MR_profile = self.MR_profile
+
 		yc = D - t
 		if yc.size != 1:
 			# ensure yc is ascending
 			if yc[0] > yc[-1]:
 				yc = yc[::-1]
 				T = T[::-1]
-			profileName = os.path.join(profileDir, f"T{self.MR_profile}-i{tag}.T")
+			profileName = os.path.join(profileDir, f"T{MR_profile}-i{tag}.T")
 			with open(profileName, 'w') as f:
 				f.write(f"#\n")
 				f.write(f"#\n")
@@ -278,7 +285,7 @@ class art(base):
 				for yi, Ti in zip(yc, T):
 					f.write(f"{yi} {Ti}\n")
 
-		outputName = f"T{self.MR_profile}-i{tag}-abs{self.kappa:0.0f}-sca{self.sigma:0.0f}-{self.SF}-g1{self.g1:0.3f}-D{D*1e6:0.3f}microns-size{len(t)}-nRays{self.nRays}.emi"
+		outputName = f"T{MR_profile}-i{tag}-abs{self.kappa:0.0f}-sca{self.sigma:0.0f}-{self.SF}-g1{self.g1:0.3f}-D{D*1e6:0.3f}microns-size{len(t)}-nRays{self.nRays}.emi"
 		emission = calc_emission(	ext=self.beta,
 									omega=self.omega,
 									T=profileName if profileName else T[0],
