@@ -212,6 +212,7 @@ class art(base):
 			for i in range(self.size):
 				q_pos = 0.0
 				q_neg = 0.0
+				dq_medium.append(0.0)
 				if i != self.size-1: # omit last cell
 					D = self.dx * (self.size-i-1) # slab thickness
 					t = self.x[i+1:] - (self.x[i] + self.dx/2)
@@ -222,6 +223,25 @@ class art(base):
 										SF=self.SF,
 										g1=self.g1,
 										D=D)
+					rho_plus = calc_ref(thickness=D,
+										ext=self.beta,
+										omega=self.omega,
+										SF=self.SF,
+										g1=self.g1)
+					rho_minus = calc_ref(thickness=self.D - D,
+										ext=self.beta,
+										omega=self.omega,
+										SF=self.SF,
+										g1=self.g1)
+					q_pos /= (1 - rho_plus * rho_minus)
+					dq_medium[-1] += calc_dq_ED(q_pos,
+											t=self.dx/2,
+											beta=self.beta,
+											omega=self.omega,
+											SF=self.SF,
+											g1=self.g1,
+											rho=rho_minus
+											)[0]
 				if i != 0: # omit first cell
 					D = self.dx * i
 					t = (self.x[i] - self.dx/2) - self.x[0:i]
@@ -232,15 +252,25 @@ class art(base):
 										SF=self.SF,
 										g1=self.g1,
 										D=D)
-				dq_medium.append(
-					calc_ED(q_pos+q_neg,
-							t=self.dx/2,
-							beta=self.beta,
-							omega=self.omega,
-							SF=self.SF,
-							g1=self.g1,
-							D=self.dx)[0]
-				)
+					rho_plus = calc_ref(thickness=D,
+										ext=self.beta,
+										omega=self.omega,
+										SF=self.SF,
+										g1=self.g1)
+					rho_minus = calc_ref(thickness=self.D - D,
+										ext=self.beta,
+										omega=self.omega,
+										SF=self.SF,
+										g1=self.g1)
+					q_neg /= (1 - rho_plus * rho_minus)
+					dq_medium[-1] += calc_dq_ED(q_neg,
+											t=self.dx/2,
+											beta=self.beta,
+											omega=self.omega,
+											SF=self.SF,
+											g1=self.g1,
+											rho=rho_minus
+											)[0]
 			self._dq_medium_term = np.array(dq_medium)
 		return self._dq_medium_term
 	
