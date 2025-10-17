@@ -49,17 +49,13 @@ class base:
 
 class art(base):
 	def __init__(self, beta:float, omega:float, SF:str, g1:float, D:float, 
-			  T:float|str, size:int, nRays:int, in_rad:float, size_RMCRT:int=None):
+			  T:float|str, size:int, nRays:int, in_rad:float):
 		super().__init__(beta=beta, omega=omega, SF=SF, g1=g1, D=D)
 
 		self.size = size
-		self.size_RMCRT = size_RMCRT if size_RMCRT else size
 		self.dx = self.D / self.size
 		self.x = np.linspace(self.dx/2, self.D-self.dx/2, self.size)
-		self.dx_RMCRT = self.D / self.size_RMCRT
-		self._x_RMCRT = None
 		self.xnorm = self.x / self.D
-		self._xnorm_RMCRT = None
 		self.t = self.D - self.x # distance from the radiating surface
 		self.tau_t = self.t * self.beta
 
@@ -78,30 +74,16 @@ class art(base):
 		self.nRays = nRays
 		self.in_rad = in_rad # applied at xhi
 
-		# corresponds to self.size_RMCRT
-		self._dq_RMCRT = None 
-		self._dq_model_xRMCRT = None
-		self._dq_gas_RMCRT = None
-
 		# All are func of self.x (not xMR), corresponds to self.size
 		self._dq_model = None
 		self._dq_cooling_term = None
 		self._dq_gas_term = None
 		self._dq_medium_term = None
+		self._dq_RMCRT = None 
 		self._dq_cooling_RMCRT = None
+		self._dq_gas_RMCRT = None
 		self._dq_medium_RMCRT = None
 
-	@property
-	def x_RMCRT(self):
-		if self._x_RMCRT is None:
-			self._x_RMCRT = np.linspace(self.dx_RMCRT/2, self.D-self.dx_RMCRT/2, self.size_RMCRT)
-		return self._x_RMCRT
-	
-	@property
-	def xnorm_RMCRT(self):
-		if self._xnorm_RMCRT is None:
-			self._xnorm_RMCRT = self.x_RMCRT / self.D
-		return self._xnorm_RMCRT
 
 	@property
 	def dq_RMCRT(self):
@@ -109,12 +91,12 @@ class art(base):
 			print("Calculating dq_RMCRT...")
 			print(f"\text={self.beta}, omega={self.omega}, SF={self.SF}, g1={self.g1}, D={self.D}\n" + \
 		 			f"\tT={self.T if self.T is not None else self.MR_profile}, in_rad={self.in_rad}\n" + \
-					f"\tsize={self.size_RMCRT}, nRays={self.nRays}")	
+					f"\tsize={self.size}, nRays={self.nRays}")	
 			_, self._dq_RMCRT = calc_dq(kappa=self.kappa,
 											sigma_sca=self.sigma,
 											T=self.MR_profile if self.MR_profile else self.T,
 											limits=[0,self.D],
-											size=self.size_RMCRT,
+											size=self.size,
 											nRays=self.nRays,
 											SF=self.SF,
 											g1=self.g1,
@@ -183,7 +165,7 @@ class art(base):
 										sigma_sca=self.sigma,
 										T=0.0,
 										limits=[0,self.D],
-										size=self.size_RMCRT,
+										size=self.size,
 										nRays=self.nRays,
 										SF=self.SF,
 										g1=self.g1,
@@ -338,11 +320,3 @@ class art(base):
 			# 		f"\tsize={self.size}, nRays={self.nRays}")
 			self._dq_model = self.dq_cooling_term - self.dq_gas_term - self.dq_medium_term
 		return self._dq_model
-	
-	@property
-	def dq_model_xRMCRT(self):
-		if self._dq_model_xRMCRT is None:
-			if self.size_RMCRT > self.size:
-				raise ValueError("size_RMCRT must be less than or equal to size")
-			self._dq_model_xRMCRT = np.interp(self.x_RMCRT, self.x, self.dq_model)
-		return self._dq_model_xRMCRT
