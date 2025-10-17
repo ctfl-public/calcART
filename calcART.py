@@ -1160,8 +1160,7 @@ def calc_EWET(t:np.ndarray, T:np.ndarray, beta:float, omega:float, SF:str, g1:fl
 
 def calc_ED(q:float, t:np.ndarray, beta:float, omega:float, SF:str, g1:float, D:float=None, rho:float=None):
 	"""
-	Calculate exponential decay of div.q within an infinite slab using the 
-	exponential decay (ED) model.
+	The exponential decay (ED) model of div.q within an infinite slab, independent of dx.
 
 	Args:
 		q (float): Incident heat flux.
@@ -1274,7 +1273,7 @@ def calc_ED(q:float, t:np.ndarray, beta:float, omega:float, SF:str, g1:float, D:
 def calc_dq_ED(q:float, t:np.ndarray, beta:float, omega:float, SF:str, g1:float, rho:float=None):
 	"""
 	Calculate exponential decay of div.q within an infinite slab using the 
-	exponential decay (ED) model.
+	exponential decay (ED) model, dependent of dx.
 
 	Args:
 		q (float): Incident heat flux.
@@ -1283,8 +1282,7 @@ def calc_dq_ED(q:float, t:np.ndarray, beta:float, omega:float, SF:str, g1:float,
 		omega (float): Scattering coefficient (1/m).
 		SF (str): Scattering function type, e.g., "HG" for Henyey-Greenstein.
 		g1 (float): Asymmetry parameter for scattering.
-		D (float, None if rho is provided): Thickness of the slab (m).
-		rho (float, None if D is provided): Reflectivity of the slab. If None, it will be calculated using calc_ref.
+		rho (float, optional): Reflectivity of the slab. If None, it will be calculated using calc_ref.
 
 	Returns:
 		ndarray (float): Divergence of q profile along the slab (W/m^3). 
@@ -1294,23 +1292,27 @@ def calc_dq_ED(q:float, t:np.ndarray, beta:float, omega:float, SF:str, g1:float,
 		t = np.array([t])
 
 	size_l = len(t)
-	dt = abs(t[1]-t[0]) if size_l > 1 else t[0]
-	D = max(t) + dt/2
+	dx_l = t[1]-t[0] if size_l > 1 else t[0] # +/- spacing in t
+	D = max(t) + abs(dx_l)/2
 	if rho is None:
 		rho = calc_ref(D, beta, omega, SF=SF, g1=g1) # to be replaced with reflectivity model
      
 	model_size = 200
 	model_tau = 30
-	dx_h = D / model_size
 	size_h = int(D*beta * model_size / model_tau)
-	if size_l > size_h:
-		raise ValueError(f"Error: input size {size_l} is larger than model size {size_h}.")
-    
 	dq_interpolated = np.zeros_like(t)
+	N = int(size_h/size_l) # number of high-res points per low-res point
+	size_h = N * size_l
+	if size_l >= size_h:
+		# print(f"Warning: size_l={size_l} >= size_h={size_h}, Using ED model directly.")
+		return calc_ED(q, t, beta, omega, SF, g1, rho=rho)
+
+	t_0 = t[0] - dx_l/2
 	for i in range(size_l):
-		indx_left = i*int(size_h/size_l)
-		indx_right = (i+1)*int(size_h/size_l)
-		for indx in range(indx_left, indx_right):
-			dq_interpolated[i] += calc_ED(q, (indx+0.5)*dx_h, beta, omega, SF, g1, rho=rho) * dx_h
+		t_N = t_0 + dx_l
+		t_model = np.linspace(t_0, t_N, N, endpoint=True)
+		dq_model = calc_ED(q, t_model, beta, omega, SF, g1, rho=rho)
+		dq_interpolated[i] = np.trapz(dq_model, t_model) / dx_l
+		t_0 = t_N
 	return dq_interpolated
 
