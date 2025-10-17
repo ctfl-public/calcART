@@ -390,9 +390,14 @@ def calc_dqrad(kappa, sigma_sca, T:str|float, outputName=None, limits=[0, 1], \
     
     D = abs(limits[1] - limits[0])
     if (D <= 0.001):
+        high_precision = True
+    elif (D*1000 <= 0.001):
         raise ValueError("Error: Thickness is too small, results may conflict.")
     if not outputName:
-        outputName = f"T{T}-abs{kappa:0.0f}-sca{sigma_sca:0.0f}-{SF}-g1{g1:0.3f}-D{D:0.3f}-size{size:0.0f}-nRays{nRays:0.0f}-inrad{in_rad:0.1e}.dqrad"
+        if high_precision:
+            outputName = f"T{T}-abs{kappa:0.0f}-sca{sigma_sca:0.0f}-{SF}-g1{g1:0.3f}-D{D*1000:0.3f}mm-size{size:0.0f}-nRays{nRays:0.0f}-inrad{in_rad:0.1e}.dqrad"
+        else:
+            outputName = f"T{T}-abs{kappa:0.0f}-sca{sigma_sca:0.0f}-{SF}-g1{g1:0.3f}-D{D:0.3f}-size{size:0.0f}-nRays{nRays:0.0f}-inrad{in_rad:0.1e}.dqrad"
     outfile = os.path.join(mydir,outputName)
 
     # skip runing of file exists
