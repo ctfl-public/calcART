@@ -196,7 +196,7 @@ class art(base):
 	@property
 	def dq_gas_term(self):
 		if self._dq_gas_term is None:
-			self._dq_gas_term = calc_ED(q=self.in_rad, 
+			self._dq_gas_term = calc_dq_ED(q=self.in_rad, 
 										t=self.t, 
 										beta=self.beta, 
 										omega=self.omega, 
