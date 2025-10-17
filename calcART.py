@@ -259,7 +259,7 @@ def calc_dq_medium(kappa:float, sigma_sca:float, T:str|float, outputName=None, l
 
 
 def calc_dq_cooling(kappa:float, sigma_sca:float, T:float, D:float, \
-			nRays=1000, SF='LA', g1=0, \
+			nRays=200000, SF='LA', g1=0, \
             machine = "serial", \
             cmdargs = ["-screen","none"]):
     """
