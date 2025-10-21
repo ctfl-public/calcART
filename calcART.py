@@ -1297,7 +1297,7 @@ def calc_dq_ED(q:float, t:np.ndarray, beta:float, omega:float, SF:str, g1:float,
 		t = np.array([t])
 
 	size_l = len(t)
-	dx_l = t[1]-t[0] if size_l > 1 else t[0] # +/- spacing in t
+	dx_l = t[1]-t[0] if size_l > 1 else 2*t[0] # +/- spacing in t
 	D = max(t) + abs(dx_l)/2
 	if rho is None:
 		rho = calc_ref(D, beta, omega, SF=SF, g1=g1) # to be replaced with reflectivity model
