@@ -1321,3 +1321,32 @@ def calc_dq_ED(q:float, t:np.ndarray, beta:float, omega:float, SF:str, g1:float,
 		t_0 = t_N
 	return dq_interpolated
 
+
+def calc_first_cell_dq(kappa:float, sigma:float, nRays:int, SF:str, g1:float, q:float, D:float, size:int):
+    """ 
+    Wrapper for calc_dq() to calculate dq for a given cell due to neighbors emission only at the yhi side.
+    ylo is treated as cold black.
+    
+    Args:
+        q (float): incident radiation
+        D (float): slab thickness
+        size (int): number of cells
+    """
+    print(f"Calculating first_cell_dq using RMCRT for D={D*1000:0.3f} mm, size={size}...", end=' ')
+    if (D*1000 <= 0.001):
+        raise ValueError("Error: Thickness is too small, results may conflict.")
+    outputName = f"T0-abs{kappa:0.0f}-sca{sigma:0.0f}-{SF}-g1{g1:0.3f}-D{D*1000:0.3f}mm-size{size:0.0f}-nRays{nRays:0.0f}-inrad{q:0.1e}.dq_ED_medium"
+    _, dq = calc_dq(
+        kappa=kappa,
+        sigma_sca=sigma,
+        T=0.0,
+        limits=[0, D],
+        size=size,
+        nRays=nRays,
+        SF=SF,
+        g1=g1,
+        in_rad=q,
+        outputName=outputName
+    )
+    print("\tDone.")
+    return dq[-1]

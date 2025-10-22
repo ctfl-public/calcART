@@ -198,6 +198,10 @@ class art(base):
 				if i != self.size-1: # omit last cell
 					D = self.dx * (self.size-i-1) # slab thickness
 					t = self.x[i+1:] - (self.x[i] + self.dx/2)
+					# q_pos = self._calc_emission(t=t,
+					# 							T=self.T_x[i+1:],
+					# 							D=D,
+					# 							tag=f"{i}pos")
 					q_pos = calc_EWET(	t=t,
 										T=self.T_x[i+1:],
 										beta=self.beta,
@@ -216,6 +220,16 @@ class art(base):
 										SF=self.SF,
 										g1=self.g1)
 					q_pos /= (1 - rho_plus * rho_minus)
+					# dq_medium[-1] += calc_first_cell_dq(
+					# 						kappa=self.kappa,
+					# 						sigma=self.sigma,
+					# 						nRays=self.nRays,
+					# 						SF=self.SF,
+					# 						g1=self.g1,
+					# 						q=q_pos,
+					# 						D=(i+1)*self.dx,
+					# 						size=i+1
+					# 						)
 					dq_medium[-1] += calc_dq_ED(q_pos,
 											t=self.dx/2,
 											beta=self.beta,
@@ -227,6 +241,10 @@ class art(base):
 				if i != 0: # omit first cell
 					D = self.dx * i
 					t = (self.x[i] - self.dx/2) - self.x[0:i]
+					# q_neg = self._calc_emission(t=t,
+					# 							T=self.T_x[0:i],
+					# 							D=D,
+					# 							tag=f"{i}neg")
 					q_neg = calc_EWET(	t=t,
 										T=self.T_x[0:i],
 										beta=self.beta,
@@ -245,6 +263,16 @@ class art(base):
 										SF=self.SF,
 										g1=self.g1)
 					q_neg /= (1 - rho_plus * rho_minus)
+					# dq_medium[-1] += calc_first_cell_dq(
+					# 						kappa=self.kappa,
+					# 						sigma=self.sigma,
+					# 						nRays=self.nRays,
+					# 						SF=self.SF,
+					# 						g1=self.g1,
+					# 						q=q_neg,
+					# 						D=(self.size-i)*self.dx,
+					# 						size=self.size-i
+					# 						)
 					dq_medium[-1] += calc_dq_ED(q_neg,
 											t=self.dx/2,
 											beta=self.beta,
@@ -253,6 +281,14 @@ class art(base):
 											g1=self.g1,
 											rho=rho_minus
 											)[0]
+				# dq_medium.append(
+				# 	calc_dq_ED(q_pos+q_neg,
+				# 			t=self.dx/2,
+				# 			beta=self.beta,
+				# 			omega=self.omega,
+				# 			SF=self.SF,
+				# 			g1=self.g1)[0]
+				# )
 			self._dq_medium_term = np.array(dq_medium)
 		return self._dq_medium_term
 	
