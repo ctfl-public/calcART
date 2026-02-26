@@ -1338,7 +1338,8 @@ def read_prop(fileName):
     return out
 
 
-def calc_EWET(t:np.ndarray, T:np.ndarray, beta:float, omega:float, SF:str, g1:float, D:float=None, eps:float=None):
+def calc_EWET(t:np.ndarray, T:np.ndarray, beta:float, omega:float, SF:str, g1:float, D:float=None, eps:float=None,
+              eps_method:str="RMCRT"):
 	"""
 	Calculate emission from infinite slab with nonuniform temperature 
 	using the exponential weighted effective temperature (EWET) emission model.
@@ -1352,7 +1353,8 @@ def calc_EWET(t:np.ndarray, T:np.ndarray, beta:float, omega:float, SF:str, g1:fl
 		g1 (float): Asymmetry parameter for scattering.
 		D (float, None if eps is provided): Thickness of the slab (m).
         eps (float, None if D is provided): Emissivity of the slab. If None, it will be calculated using calc_abs.
-
+		eps_method (str): Method to calculate emissivity if eps is None, either "RMCRT" or "model" (default: "RMCRT").
+        
 	Returns:
 		float: Emission from the slab (W/m^2).
 	"""
@@ -1365,7 +1367,12 @@ def calc_EWET(t:np.ndarray, T:np.ndarray, beta:float, omega:float, SF:str, g1:fl
 		rhos = np.exp(-(p[0]*(1-omega)**2+p[1]*omega**2+p[2]+p[3]*g1*omega)*beta*t)
 		T4 = np.average(np.power(T, 4), weights=rhos)
 		if eps is None:
-			eps = calc_abs(D, beta, omega, SF="HG", g1=g1) # to be replaced with emissivity model
+			if eps_method == "RMCRT":
+				eps = calc_abs(D, beta, omega, SF="HG", g1=g1) # to be replaced with emissivity model
+			elif eps_method == "model":
+				if (beta*D <= 10):
+					raise Warning("Optical thickness is too small, Emissivity model may fail.")
+				eps = calc_emissivity_bezier(omega, SF="HG", g1=g1)
 		# print(f"\t\t\tEWET: eps={eps}, T={T4**0.25:.2f} K")
 		return eps * SIGMA * T4
 	else:
