@@ -881,6 +881,103 @@ def calc_ref(thickness, ext, omega,
         return read_prop(outfile) * np.pi
 
 
+def calc_emissivity_bezier(omega, SF='HG', g1=0):
+    """
+    Calculate emissivity using Bezier curve fit based on ext, omega, and scattering function.
+    
+    Args:
+        omega (float or array-like): Single scattering albedo values. Must be within [0, 1].
+        SF (str): Scattering function type - 'LA' (Linear Anisotropic) or 'HG' (Henyey-Greenstein).
+        g1 (float): Anisotropy parameter (default: 0).
+        
+    Returns:
+        float or numpy.ndarray: Emissivity value calculated from the Bezier curve fit with the same shape as `omega`.
+    """
+
+    if (SF == 'HG'):
+        return bezier_HG(omega, g1)
+    else:
+        raise ValueError(SF+" is not recognized.")
+
+
+def bezier_HG(omega, g1, n_t=101):
+    """
+    Approximate emissivity using the cubic Bezier HG model from tabulated control points.
+
+    Parameters
+    ----------
+    omega : float or array-like
+        Single scattering albedo values. Must be within [0, 1].
+    g1 : float
+        Asymmetry factor. Must be within [-0.8, 0.8].
+    n_t : int, optional
+        Number of parametric samples used to invert omega(t) -> epsilon(t).
+
+    Returns
+    -------
+    float or numpy.ndarray
+        Emissivity values with the same shape as `omega`.
+    """
+    # HG control points from the paper's Table 1.
+    g_table = np.array([-0.8, -0.6, -0.3, 0.0, 0.3, 0.6, 0.8], dtype=float)
+    p1x_table = np.array([0.856, 0.819, 0.846, 0.849, 0.859, 0.894, 0.942], dtype=float)
+    p1y_table = np.array([0.648, 0.706, 0.764, 0.825, 0.880, 0.930, 0.948], dtype=float)
+    p2x_table = np.array([0.997, 0.998, 0.998, 0.998, 0.998, 0.997, 0.995], dtype=float)
+    p2y_table = np.array([0.412, 0.465, 0.483, 0.543, 0.636, 0.778, 0.954], dtype=float)
+
+    # Validate g1 range
+    if g1 < g_table[0] or g1 > g_table[-1]:
+        raise ValueError("g1 must be within [-0.8, 0.8] for the HG Bezier model.")
+
+    # Interpolate control points for the given g1.
+    p1x = np.interp(g1, g_table, p1x_table)
+    p1y = np.interp(g1, g_table, p1y_table)
+    p2x = np.interp(g1, g_table, p2x_table)
+    p2y = np.interp(g1, g_table, p2y_table)
+
+    # Validate omega range and convert to numpy array for processing.
+    omega_arr = np.asarray(omega, dtype=float)
+    omega_shape = omega_arr.shape
+    omega_flat = np.atleast_1d(omega_arr).ravel()
+    if np.any((omega_flat < 0.0) | (omega_flat > 1.0)):
+        raise ValueError("omega must be within [0, 1] for the HG Bezier model.")
+
+    # Cubic Bezier with P0=(0,1), P3=(1,0), and interpolated P1/P2.
+    # omega(t) = bx(t) = Bezier curve in x direction
+    # epsilon(t) = by(t) = Bezier curve in y direction.
+    t = np.linspace(0.0, 1.0, int(n_t), dtype=float)
+    one_minus_t = 1.0 - t
+    bx = (
+        3.0 * (one_minus_t ** 2) * t * p1x
+        + 3.0 * one_minus_t * (t ** 2) * p2x
+        + (t ** 3)
+    )
+    by = (
+        (one_minus_t ** 3)
+        + 3.0 * (one_minus_t ** 2) * t * p1y
+        + 3.0 * one_minus_t * (t ** 2) * p2y
+    )
+
+    # Invert the Bezier curve to find epsilon for each omega.
+    # (instead of both being functions of the curve parameter t)
+    sort_idx = np.argsort(bx)
+    bx_sorted = bx[sort_idx]
+    by_sorted = by[sort_idx]
+    bx_unique, unique_idx = np.unique(bx_sorted, return_index=True)
+    by_unique = by_sorted[unique_idx]
+    if bx_unique.size < 2:
+        raise ValueError("Bezier curve inversion failed: omega(t) is not usable for interpolation.")
+
+    # Interpolate to find epsilon values corresponding to the input omega values.
+    eps_flat = np.interp(omega_flat, bx_unique, by_unique)
+    # Reshape the output to match the input shape of omega.
+    eps = eps_flat.reshape(omega_shape)
+
+    if omega_shape == ():
+        return float(eps_flat[0])
+    return eps
+
+
 def calc_abs(thickness, ext, omega,
                 nRays=200000, SF='LA', A1=0, 
                 g1=0,
