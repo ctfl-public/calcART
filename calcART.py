@@ -881,19 +881,51 @@ def calc_ref(thickness, ext, omega,
         return read_prop(outfile) * np.pi
 
 
-def calc_total_emissivity(spectral_emissivity=None, omegas=None, wavelengths=None, T=None, SF='HG', g1=0):
+def calc_total_emissivity_from_omega(lam, T, omegas, SF='HG', g1=0):
+    """
+    Calculate total emissivity by integrating spectral emissivity over wavelength,
+    weighted by blackbody spectral intensity at temperature T, where spectral emissivity is computed from scattering albedo (omega) using a Bezier curve fit model.
+
+    Args:
+        lam (array-like): Wavelengths in microns.
+        T (float or array-like): Temperature(s) in Kelvin.
+        omegas (array-like): Single scattering albedo values corresponding to `wavelengths`.
+        SF (str): Scattering function (default: 'HG' for Henyey-Greenstein).
+        g1 (float): Anisotropy parameter for the scattering function (default: 0).
+
+    Returns:
+        float or numpy.ndarray: Total emissivity with same shape as `T`.
+    """
+    return calc_total_emissivity(lam, T, omegas=omegas, SF=SF, g1=g1)
+
+def calc_total_emissivity_from_epsilon(lam, T, epsilon):
+    """
+    Calculate total emissivity by integrating spectral emissivity over wavelength,
+    weighted by blackbody spectral intensity at temperature T, where spectral emissivity is provided directly.
+
+    Args:
+        lam (array-like): Wavelengths in microns.
+        T (float or array-like): Temperature(s) in Kelvin.
+        epsilon (array-like): Spectral emissivity values corresponding to `wavelengths`.
+
+    Returns:
+        float or numpy.ndarray: Total emissivity with same shape as `T`.
+    """
+    return calc_total_emissivity(lam, T, epsilon=epsilon)
+
+def calc_total_emissivity(lam, T, epsilon=None, omegas=None, SF='HG', g1=0):
     """
     Calculate total emissivity by integrating spectral emissivity over wavelength,
     weighted by blackbody spectral intensity at temperature T.
     
     Args:
-        spectral_emissivity (array-like, optional): Spectral emissivity values
+        lam (array-like): Wavelengths in microns.
+        T (float or array-like): Temperature(s) in Kelvin.
+        epsilon (array-like, optional): Spectral emissivity values
             corresponding to `wavelengths`.
         omegas (array-like, optional): Single scattering albedo values corresponding
             to `wavelengths`. If provided, spectral emissivity is computed with
             `calc_emissivity_bezier(omegas, SF=SF, g1=g1)`.
-        wavelengths (array-like): Wavelengths in microns.
-        T (float or array-like): Temperature(s) in Kelvin.
         SF (str): Scattering function passed to `calc_emissivity_bezier` when
             `omegas` is provided.
         g1 (float): Anisotropy parameter passed to `calc_emissivity_bezier` when
@@ -903,30 +935,32 @@ def calc_total_emissivity(spectral_emissivity=None, omegas=None, wavelengths=Non
         float or numpy.ndarray: Total emissivity with same shape as `T`.
 
     Notes:
-        Exactly one of `spectral_emissivity` or `omegas` must be supplied.
+        Use exactly one spectral mode:
+        - `epsilon`: provide epsilon(lambda) directly.
+        - `omegas`: provide omega(lambda), and epsilon(lambda) is computed via Bezier.
     """
-    if wavelengths is None:
-        raise ValueError("wavelengths must be provided.")
-    if T is None:
-        raise ValueError("T must be provided.")
-
-    has_spectral = spectral_emissivity is not None
+    has_epsilon = epsilon is not None
     has_omegas = omegas is not None
-    if has_spectral == has_omegas:
-        raise ValueError("Provide exactly one of spectral_emissivity or omegas.")
+    if has_epsilon == has_omegas:
+        raise ValueError(
+            "Choose one emissivity input mode: "
+            "set exactly one of `epsilon` or `omegas`."
+        )
 
-    lam_um = np.asarray(wavelengths, dtype=float)
+    lam_um = np.asarray(lam, dtype=float)
     lam_m = lam_um * 1e-6
     if np.any(lam_m <= 0):
-        raise ValueError("wavelengths must be positive (in microns).")
+        raise ValueError("wavelength must be positive (in microns).")
 
-    if has_spectral:
-        eps_lambda = np.asarray(spectral_emissivity, dtype=float)
+    if has_epsilon:
+        eps_lambda = np.asarray(epsilon, dtype=float)
     else:
         eps_lambda = np.asarray(calc_emissivity_bezier(omegas, SF=SF, g1=g1), dtype=float)
 
     if eps_lambda.size != lam_m.size:
-        raise ValueError("spectral_emissivity/omegas must have the same length as wavelengths.")
+        if has_epsilon:
+            raise ValueError("`epsilon` must have the same length as `lam`.")
+        raise ValueError("`omegas` must have the same length as `lam`.")
 
     T_arr = np.asarray(T, dtype=float)
     T_shape = T_arr.shape
