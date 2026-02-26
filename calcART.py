@@ -1,6 +1,6 @@
 from sparta import sparta 
 import os
-from constants import SIGMA
+from constants import SIGMA, H, C, K_B
 import sys
 import numpy as np
 import warnings
@@ -881,6 +881,84 @@ def calc_ref(thickness, ext, omega,
         return read_prop(outfile) * np.pi
 
 
+def calc_total_emissivity(spectral_emissivity=None, omegas=None, wavelengths=None, T=None, SF='HG', g1=0):
+    """
+    Calculate total emissivity by integrating spectral emissivity over wavelength,
+    weighted by blackbody spectral intensity at temperature T.
+    
+    Args:
+        spectral_emissivity (array-like, optional): Spectral emissivity values
+            corresponding to `wavelengths`.
+        omegas (array-like, optional): Single scattering albedo values corresponding
+            to `wavelengths`. If provided, spectral emissivity is computed with
+            `calc_emissivity_bezier(omegas, SF=SF, g1=g1)`.
+        wavelengths (array-like): Wavelengths in microns.
+        T (float or array-like): Temperature(s) in Kelvin.
+        SF (str): Scattering function passed to `calc_emissivity_bezier` when
+            `omegas` is provided.
+        g1 (float): Anisotropy parameter passed to `calc_emissivity_bezier` when
+            `omegas` is provided.
+        
+    Returns:
+        float or numpy.ndarray: Total emissivity with same shape as `T`.
+
+    Notes:
+        Exactly one of `spectral_emissivity` or `omegas` must be supplied.
+    """
+    if wavelengths is None:
+        raise ValueError("wavelengths must be provided.")
+    if T is None:
+        raise ValueError("T must be provided.")
+
+    has_spectral = spectral_emissivity is not None
+    has_omegas = omegas is not None
+    if has_spectral == has_omegas:
+        raise ValueError("Provide exactly one of spectral_emissivity or omegas.")
+
+    lam_um = np.asarray(wavelengths, dtype=float)
+    lam_m = lam_um * 1e-6
+    if np.any(lam_m <= 0):
+        raise ValueError("wavelengths must be positive (in microns).")
+
+    if has_spectral:
+        eps_lambda = np.asarray(spectral_emissivity, dtype=float)
+    else:
+        eps_lambda = np.asarray(calc_emissivity_bezier(omegas, SF=SF, g1=g1), dtype=float)
+
+    if eps_lambda.size != lam_m.size:
+        raise ValueError("spectral_emissivity/omegas must have the same length as wavelengths.")
+
+    T_arr = np.asarray(T, dtype=float)
+    T_shape = T_arr.shape
+    T_flat = np.atleast_1d(T_arr).ravel()
+    if np.any(T_flat <= 0):
+        raise ValueError("T must be positive.")
+
+    # Reshape for broadcasting: lam_m (N_lambda,) -> lam_col (N_lambda, 1),
+    # T_flat (N_T,) -> T_row (1, N_T), so elementwise ops create an
+    # (N_lambda, N_T) grid (all wavelength-temperature combinations) without loops.
+    lam_col = lam_m[:, None]
+    T_row = T_flat[None, :]
+
+    # Use np.errstate to handle potential overflow in exp(x) for small wavelengths and high temperatures.
+    with np.errstate(over='ignore', divide='ignore', invalid='ignore'):
+        x = (H * C) / (lam_col * K_B * T_row)
+        I_b = (2.0 * H * C**2) / (lam_col**5 * (np.exp(x) - 1.0))
+
+    numerator = np.trapz(eps_lambda[:, None] * I_b, x=lam_m, axis=0)
+    denominator = np.trapz(I_b, x=lam_m, axis=0)
+
+    # Check for non-physical values in the denominator (should be positive and finite).
+    if np.any(~np.isfinite(denominator)) or np.any(denominator <= 0):
+        raise ValueError("Blackbody denominator is non-physical; check wavelengths and T.")
+
+    eps_total = numerator / denominator
+
+    if T_shape == ():
+        return float(eps_total[0])
+    return eps_total.reshape(T_shape)
+
+
 def calc_emissivity_bezier(omega, SF='HG', g1=0):
     """
     Calculate emissivity using Bezier curve fit based on ext, omega, and scattering function.
@@ -938,7 +1016,7 @@ def bezier_HG(omega, g1, n_t=101):
     # Validate omega range and convert to numpy array for processing.
     omega_arr = np.asarray(omega, dtype=float)
     omega_shape = omega_arr.shape
-    omega_flat = np.atleast_1d(omega_arr).ravel()
+    omega_flat = np.atleast_1d(omega_arr).ravel() # ravel to ensure 1D array for integration
     if np.any((omega_flat < 0.0) | (omega_flat > 1.0)):
         raise ValueError("omega must be within [0, 1] for the HG Bezier model.")
 
