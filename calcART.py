@@ -7,7 +7,7 @@ import warnings
 from data_management import check_version_file
 
 # initialize data management lazily to avoid side effects during import
-using_data_management = True
+using_data_management = False
 mydir = None
 
 
