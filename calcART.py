@@ -6,9 +6,18 @@ import numpy as np
 import warnings
 from data_management import check_version_file
 
-# initialize data management
-mydir = check_version_file()
-print(f"Data directory: {mydir}")
+# initialize data management (for development purposes)
+using_data_management = False 
+if using_data_management:
+    mydir = check_version_file()
+    print(f"Data directory: {mydir}")
+else:
+    mydir = os.path.join(os.getcwd(), "dump")
+    try:
+        os.makedirs(mydir, exist_ok=True)
+    except Exception as e:
+        print(f"Could not create directory '{mydir}': {e}")
+        raise SystemExit("Failed to initialize calcART data management.")
 
 
 def calc_dq(kappa:float, sigma_sca:float, T:str|float, outputName=None, limits=[0, 1], \
