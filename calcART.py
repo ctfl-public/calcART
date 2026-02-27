@@ -6,18 +6,28 @@ import numpy as np
 import warnings
 from data_management import check_version_file
 
-# initialize data management (for development purposes)
-using_data_management = False 
-if using_data_management:
-    mydir = check_version_file()
-    print(f"Data directory: {mydir}")
-else:
-    mydir = os.path.join(os.getcwd(), "dump")
-    try:
-        os.makedirs(mydir, exist_ok=True)
-    except Exception as e:
-        print(f"Could not create directory '{mydir}': {e}")
-        raise SystemExit("Failed to initialize calcART data management.")
+# initialize data management lazily to avoid side effects during import
+using_data_management = True
+mydir = None
+
+
+def _get_mydir():
+    """Return the data directory, initializing it on first use."""
+    global mydir
+    if mydir is not None:
+        return mydir
+
+    if using_data_management:
+        mydir = check_version_file()
+        print(f"Data directory: {mydir}")
+    else:
+        mydir = os.path.join(os.getcwd(), "dump")
+        try:
+            os.makedirs(mydir, exist_ok=True)
+        except Exception as e:
+            print(f"Could not create directory '{mydir}': {e}")
+            raise SystemExit("Failed to initialize calcART data management.")
+    return mydir
 
 
 def calc_dq(kappa:float, sigma_sca:float, T:str|float, outputName=None, limits=[0, 1], \
@@ -65,7 +75,7 @@ def calc_dq(kappa:float, sigma_sca:float, T:str|float, outputName=None, limits=[
         raise ValueError("Error: Thickness is too small, results may conflict.")
     if not outputName:
         outputName = f"T{T}-abs{kappa:0.0f}-sca{sigma_sca:0.0f}-{SF}-g1{g1:0.3f}-D{D*1000:0.3f}mm-size{size:0.0f}-nRays{nRays:0.0f}-inrad{in_rad:0.1e}.dq"
-    outfile = os.path.join(mydir,outputName)
+    outfile = os.path.join(_get_mydir(), outputName)
 
     # skip runing of file exists
     if os.path.exists(outfile) and os.path.getsize(outfile) > 0:
@@ -183,7 +193,7 @@ def calc_dq_medium(kappa:float, sigma_sca:float, T:str|float, outputName=None, l
         raise ValueError("Error: Thickness is too small, results may conflict.")
     if not outputName:
         outputName = f"T{T}-abs{kappa:0.0f}-sca{sigma_sca:0.0f}-{SF}-g1{g1:0.3f}-D{D*1000:0.3f}mm-size{size:0.0f}-nRays{nRays:0.0f}.dq_medium"
-    outfile = os.path.join(mydir,outputName)
+    outfile = os.path.join(_get_mydir(), outputName)
 
     # skip runing of file exists
     if os.path.exists(outfile) and os.path.getsize(outfile) > 0:
@@ -291,7 +301,7 @@ def calc_dq_cooling(kappa:float, sigma_sca:float, T:float, D:float, \
     if (D*1e6 <= 0.001):
         raise ValueError("Error: Thickness is too small, results may conflict.")
     outputName = f"T{T:0.4f}-abs{kappa:0.0f}-sca{sigma_sca:0.0f}-{SF}-g1{g1:0.3f}-D{D*1e6:0.3f}microns-nRays{nRays:0.0f}.dq_cooling"
-    outfile = os.path.join(mydir,outputName)
+    outfile = os.path.join(_get_mydir(), outputName)
 
     # skip runing of file exists
     if os.path.exists(outfile) and os.path.getsize(outfile) > 0:
@@ -407,7 +417,7 @@ def calc_dqrad(kappa, sigma_sca, T:str|float, outputName=None, limits=[0, 1], \
             outputName = f"T{T}-abs{kappa:0.0f}-sca{sigma_sca:0.0f}-{SF}-g1{g1:0.3f}-D{D*1000:0.3f}mm-size{size:0.0f}-nRays{nRays:0.0f}-inrad{in_rad:0.1e}.dqrad"
         else:
             outputName = f"T{T}-abs{kappa:0.0f}-sca{sigma_sca:0.0f}-{SF}-g1{g1:0.3f}-D{D:0.3f}-size{size:0.0f}-nRays{nRays:0.0f}-inrad{in_rad:0.1e}.dqrad"
-    outfile = os.path.join(mydir,outputName)
+    outfile = os.path.join(_get_mydir(), outputName)
 
     # skip runing of file exists
     if os.path.exists(outfile) and os.path.getsize(outfile) > 0:
@@ -511,7 +521,7 @@ def calc_dq_equilibrium(kappa:float, sigma_sca:float, T:float, outputName=None, 
         raise ValueError("Error: Thickness is too small, results may conflict.")
     if not outputName:
         outputName = f"T{T}-abs{kappa:0.0f}-sca{sigma_sca:0.0f}-{SF}-g1{g1:0.3f}-D{D:0.3f}-size{size}-nRays{nRays}.dqequilibrium"
-    outfile = os.path.join(mydir,outputName)
+    outfile = os.path.join(_get_mydir(), outputName)
 
     # skip runing of file exists
     if os.path.exists(outfile) and os.path.getsize(outfile) > 0:
@@ -594,7 +604,7 @@ def read_dqrad(fileName):
                 positive values indicate incoming radiation (heat gain),
                 negative values indicate outgoing radiation (heat loss).
     """
-    filePath = os.path.join(mydir,fileName)
+    filePath = os.path.join(_get_mydir(), fileName)
     yc = []
     dqrad = []
     with open(filePath, 'r') as f:
@@ -660,9 +670,9 @@ def calc_trans(thickness, ext, omega,
     if (thickness*1000 <= 0.001):
         raise ValueError("Error: Thickness is too small, results may conflict.")
     if (SF == 'LA'):
-        outfile = os.path.join(mydir,f"ext{ext:.0f}-sigma{sigma_sca:.0f}-th{thickness*1000:.3f}.trans")
+        outfile = os.path.join(_get_mydir(), f"ext{ext:.0f}-sigma{sigma_sca:.0f}-th{thickness*1000:.3f}.trans")
     else:
-        outfile = os.path.join(mydir,f"ext{ext:.0f}-sigma{sigma_sca:.0f}-HG-g{g1:0.3f}-th{thickness*1000:.3f}.trans")
+        outfile = os.path.join(_get_mydir(), f"ext{ext:.0f}-sigma{sigma_sca:.0f}-HG-g{g1:0.3f}-th{thickness*1000:.3f}.trans")
 
     if not (os.path.exists(outfile) and os.path.getsize(outfile) > 0):
         spa = sparta(machine, cmdargs) 
@@ -795,9 +805,9 @@ def calc_ref(thickness, ext, omega,
     if (thickness*1e6 <= 0.001):
         raise ValueError(f"Error: Thickness {thickness*1e6:.3f} microns is too small, results may conflict.")
     if (SF == 'LA'):
-        outfile = os.path.join(mydir,f"ext{ext:.0f}-sigma{sigma_sca:.0f}-th{thickness*1e6:.3f}microns.ref")
+        outfile = os.path.join(_get_mydir(), f"ext{ext:.0f}-sigma{sigma_sca:.0f}-th{thickness*1e6:.3f}microns.ref")
     else:
-        outfile = os.path.join(mydir,f"ext{ext:.0f}-sigma{sigma_sca:.0f}-HG-g{g1:0.3f}-th{thickness*1e6:.3f}microns.ref")
+        outfile = os.path.join(_get_mydir(), f"ext{ext:.0f}-sigma{sigma_sca:.0f}-HG-g{g1:0.3f}-th{thickness*1e6:.3f}microns.ref")
 
     if not (os.path.exists(outfile) and os.path.getsize(outfile) > 0):
         spa = sparta(machine, cmdargs) 
@@ -1136,9 +1146,9 @@ def calc_abs(thickness, ext, omega,
     if (thickness*1000 <= 0.001):
         raise ValueError("Error: Thickness is too small, results may conflict.")
     if (SF == 'LA'):
-        outfile = os.path.join(mydir,f"ext{ext:.0f}-sigma{sigma_sca:.0f}-th{thickness*1000:.3f}.abs")
+        outfile = os.path.join(_get_mydir(), f"ext{ext:.0f}-sigma{sigma_sca:.0f}-th{thickness*1000:.3f}.abs")
     else:
-        outfile = os.path.join(mydir,f"ext{ext:.0f}-sigma{sigma_sca:.0f}-HG-g{g1:0.3f}-th{thickness*1000:.3f}.abs")
+        outfile = os.path.join(_get_mydir(), f"ext{ext:.0f}-sigma{sigma_sca:.0f}-HG-g{g1:0.3f}-th{thickness*1000:.3f}.abs")
 
     if not (os.path.exists(outfile) and os.path.getsize(outfile) > 0):
         spa = sparta(machine, cmdargs) 
@@ -1235,7 +1245,7 @@ def calc_emission(ext, omega, T, limits=[0, 1], \
         raise ValueError("Error: Thickness is too small, results may conflict.")
     if not outputName:
         outputName = f"T{T}-abs{kappa:0.0f}-sca{sigma_sca:0.0f}-{SF}-g1{g1:0.3f}-D{D*1000:0.3f}-size{size}-nRays{nRays}.emi"
-    outfile = os.path.join(mydir, outputName)
+    outfile = os.path.join(_get_mydir(), outputName)
 
     T_profile = T
     if (type(T) is str):
