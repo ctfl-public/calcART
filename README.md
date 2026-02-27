@@ -12,6 +12,9 @@ import ART as art
 # calculate emissivity at scattering albedo of 0.6
 epsilon = art.calc_emissivity_bezier(omega=0.6)
 ``` 
+Also, check the jupyter notebook example: [examples/emissivity-FiberForm.ipynb](examples/emissivity-FiberForm.ipynb)
+
+
 More detailed usage examples will be provided in the future. For now, please refer to the source code for available functions and their parameters.
 
 
